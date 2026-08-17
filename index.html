@@ -111,8 +111,8 @@
   <header>
     <div class="header-left">
       <span>💫 Minerva Direct</span>
-      <span class="version-tag">ver.26.08.17.19.00</span>
-      <span id="token-usage-display" class="token-badge" onclick="manualEditMonthlyTokens()" title="クリックして今月の累計トークン数を手動修正・復元">🪙 計算中...</span>
+      <span class="version-tag">ver.26.08.17.21.50</span>
+      <span id="token-usage-display" class="token-badge" onclick="manualEditMonthlyTokens()" title="クリックして今月の累計トークン数を手動修正・リセット">🪙 計算中...</span>
       <span id="fatigue-display" class="fatigue-badge">💓 情動: 平穏 (Lv.1)</span>
     </div>
     <div class="header-right">
@@ -221,6 +221,9 @@
     let spontaneousTimer = null;
     let clockCheckInterval = null;
     let currentFatigueLevel = 1;
+    let isAudioUnlocked = false;
+
+    window.activeUtterances = [];
 
     const currentMonthKey = `minerva_month_${new Date().getFullYear()}_${new Date().getMonth() + 1}`;
     const fallbackPersistentKey = "minerva_persistent_monthly_tokens";
@@ -306,6 +309,8 @@
       document.getElementById("sync-id-input").value = syncRoomId;
       const savedPersona = localStorage.getItem("minerva_selected_persona") || "円卓会議";
       document.getElementById("persona-select").value = savedPersona;
+      currentPersona = savedPersona;
+      
       voiceMode = localStorage.getItem("minerva_voice_mode") || "minerva_only";
       document.getElementById("voice-mode-select").value = voiceMode;
       
@@ -347,6 +352,19 @@
           checkScheduledEvents(true);
         }
       });
+
+      const unlockAudioHandler = () => {
+        if (!isAudioUnlocked && 'speechSynthesis' in window) {
+          const dummyUtter = new SpeechSynthesisUtterance('');
+          dummyUtter.volume = 0;
+          window.speechSynthesis.speak(dummyUtter);
+          isAudioUnlocked = true;
+        }
+        document.removeEventListener('click', unlockAudioHandler);
+        document.removeEventListener('touchstart', unlockAudioHandler);
+      };
+      document.addEventListener('click', unlockAudioHandler);
+      document.addEventListener('touchstart', unlockAudioHandler);
 
       checkScheduledEvents(false);
     };
@@ -578,7 +596,7 @@
     }
 
     function manualEditMonthlyTokens() {
-      const input = prompt("これまでの累計トークン数を入力して復元・修正できますわ：", monthlyTokens);
+      const input = prompt("これまでの累計トークン数を手動入力して修正・リセットできますわ（例: 0 や 10000）：", monthlyTokens);
       if (input !== null) {
         const parsed = parseInt(input.replace(/[^0-9]/g, ''));
         if (!isNaN(parsed)) {
@@ -589,7 +607,7 @@
             db.ref(`minerva_rooms/${syncRoomId}/global_metrics`).update({ monthlyTokens: monthlyTokens });
           }
           updateCostUI(0);
-          alert(`今月の累計トークンを ${monthlyTokens.toLocaleString()} tokens に更新・保存したわ！`);
+          alert(`今月の累計トークンを ${monthlyTokens.toLocaleString()} tokens (約${(monthlyTokens * YEN_PER_TOKEN).toFixed(2)}円) に修正したわ！`);
         }
       }
     }
@@ -651,7 +669,6 @@
       else navigator.vibrate([40, 80, 40]);
     }
 
-    // 🎙️ マイク音声認識・完全アンロック修復版
     function initSpeechRecognition() {
       const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRec) return;
@@ -664,38 +681,35 @@
         micStartTime = Date.now(); 
         clearTimeout(micSafetyTimeout);
         micSafetyTimeout = setTimeout(() => {
-          if (isMicActive) {
-            stopMicInput();
-          }
-        }, 10000); // 10秒自動タイムアウト保護
+          if (isMicActive) stopMicInput();
+        }, 12000);
       };
       
       recognition.onresult = (e) => {
-        const speechDurationSec = (Date.now() - micStartTime) / 1000;
-        const transcript = e.results[0][0].transcript;
-        document.getElementById("user-input").value = transcript;
-        stopMicInput();
-        sendMessage(null, "", true, speechDurationSec);
+        const transcript = e.results[0][0].transcript.trim();
+        if (transcript) {
+          const speechDurationSec = Math.max(1, (Date.now() - micStartTime) / 1000);
+          document.getElementById("user-input").value = transcript;
+          stopMicInput();
+          sendMessage(null, "", true, speechDurationSec);
+        } else {
+          stopMicInput();
+        }
       };
 
-      recognition.onerror = (e) => {
-        console.log("Mic Error:", e);
-        stopMicInput();
-      };
-
-      recognition.onend = () => {
-        stopMicInput();
-      };
+      recognition.onerror = () => stopMicInput();
+      recognition.onend = () => stopMicInput();
     }
 
     function toggleMicInput() {
       if (!recognition) return alert("音声入力非対応のブラウザです。");
       const btn = document.getElementById("mic-btn");
+      
       if (!isMicActive) {
         try {
           recognition.start(); 
           isMicActive = true;
-          btn.innerText = "🎙️ 認識中..."; 
+          btn.innerText = "🎙️ 聞き取り中..."; 
           btn.classList.add("active");
         } catch(e) {
           stopMicInput();
@@ -707,10 +721,10 @@
 
     function stopMicInput() {
       clearTimeout(micSafetyTimeout);
-      if (recognition && isMicActive) {
+      isMicActive = false;
+      if (recognition) {
         try { recognition.stop(); } catch(e) {}
       }
-      isMicActive = false;
       const btn = document.getElementById("mic-btn");
       if (btn) {
         btn.innerText = "🎙️ マイク"; 
@@ -718,11 +732,11 @@
       }
     }
 
-    // 🔊 音声合成エンジン・完全復活版
     function speakIntelligentVoice(speaker, fullText) {
       if (voiceMode === "muted" || !('speechSynthesis' in window)) return;
+      
       try {
-        window.speechSynthesis.cancel(); // 前の音声をクリア
+        window.speechSynthesis.cancel();
       } catch(e) {}
 
       let targetText = "";
@@ -766,7 +780,15 @@
       utter.pitch = dynamicPitch; 
       utter.rate = dynamicRate;
 
-      // ブラウザが音声リストを持っている場合は日本語ボイスを優先アタッチ
+      window.activeUtterances.push(utter);
+      
+      utter.onend = () => {
+        window.activeUtterances = window.activeUtterances.filter(u => u !== utter);
+      };
+      utter.onerror = () => {
+        window.activeUtterances = window.activeUtterances.filter(u => u !== utter);
+      };
+
       const voices = window.speechSynthesis.getVoices();
       const jaVoice = voices.find(v => v.lang === 'ja-JP' || v.lang === 'ja_JP');
       if (jaVoice) utter.voice = jaVoice;
@@ -823,9 +845,10 @@
 
     function pushDataToCloud() {
       if (!db || !syncRoomId) return;
-      db.ref(`minerva_rooms/${syncRoomId}/${currentPersona}`).set({
+      const targetP = document.getElementById("persona-select").value || currentPersona;
+      db.ref(`minerva_rooms/${syncRoomId}/${targetP}`).set({
         chatHistory: chatHistory,
-        memoryText: localStorage.getItem(`minerva_memory_${currentPersona}`) || "",
+        memoryText: localStorage.getItem(`minerva_memory_${targetP}`) || "",
         updatedAt: Date.now()
       });
       db.ref(`minerva_rooms/${syncRoomId}/global_metrics`).update({
@@ -835,6 +858,7 @@
       });
     }
 
+    // 🧠 「🧠 記憶」パネル：選択中のペルソナ固有の記憶を100%確実に開閉・保存
     function openPanel(type) {
       currentPanelType = type;
       const p = document.getElementById("panel-container");
@@ -843,14 +867,17 @@
       const saveBtn = document.getElementById("panel-save-btn");
       const extraBtn = document.getElementById("panel-extra-btn");
       const analyzeBtn = document.getElementById("panel-analyze-btn");
-      p.classList.add("active");
       
+      const activePersona = document.getElementById("persona-select").value || currentPersona;
+      currentPersona = activePersona;
+
+      p.classList.add("active");
       extraBtn.style.display = "none";
       analyzeBtn.style.display = "none";
 
       if (type === "memory") {
-        title.innerText = `🧠 「${currentPersona}」の感情バイアス記憶`;
-        area.value = localStorage.getItem(`minerva_memory_${currentPersona}`) || "";
+        title.innerText = `🧠 「${activePersona}」の感情バイアス記憶`;
+        area.value = localStorage.getItem(`minerva_memory_${activePersona}`) || "";
         area.readOnly = false; saveBtn.style.display = "inline-block";
       } else if (type === "battlemap") {
         title.innerText = "🗺️ 咎魅の戦歴・思考マップ（人生の因果図）";
@@ -876,9 +903,12 @@
     
     function savePanelContent() {
       const val = document.getElementById("panel-text").value;
+      const activePersona = document.getElementById("persona-select").value || currentPersona;
+
       if (currentPanelType === "memory") {
-        localStorage.setItem(`minerva_memory_${currentPersona}`, val);
+        localStorage.setItem(`minerva_memory_${activePersona}`, val);
         pushDataToCloud();
+        alert(`「${activePersona}」の感情記憶を保存したわ！`);
       } else if (currentPanelType === "battlemap") {
         localStorage.setItem("minerva_battlemap", val);
         pushDataToCloud();
@@ -906,6 +936,9 @@
     }
 
     function triggerAction(actionType) {
+      if (actionType === "vote" && currentPersona !== "円卓会議") {
+        return alert("決議・投票は『🌟 円卓会議（全員参加）』の時だけ有効ですわ！\nヘッダーの選択バーから「円卓会議」に切り替えて実行してくださいませ。");
+      }
       sendMessage(actionType);
     }
 
@@ -918,12 +951,51 @@
       document.getElementById("res-maho").style.width = `${getVal(80)}%`;
     }
 
+    function retrievePastDetails(queryText, allHistory, windowSize = 10) {
+      if (allHistory.length <= windowSize) return "";
+      
+      const olderHistory = allHistory.slice(0, allHistory.length - windowSize);
+      const query = queryText.toLowerCase();
+
+      const hasTimeRecall = /今朝|朝|昼|さっき|先ほど|今日|あの話|あの件|前に|昨日|さっき言った/.test(query);
+      const words = queryText.match(/[\u4e00-\u9faf\u3040-\u309f\u30a0-\u30ff\w]{2,}/g) || [];
+      
+      let matchedItems = [];
+
+      olderHistory.forEach((msg, idx) => {
+        const text = msg.parts[0].text;
+        let score = 0;
+
+        if (hasTimeRecall && idx < 6) score += 2;
+
+        words.forEach(w => {
+          if (w.length >= 2 && text.includes(w) && !/^(です|ます|した|こと|もの|から|ので|これ|それ|あれ)$/.test(w)) {
+            score += 3;
+          }
+        });
+
+        if (score > 0) {
+          matchedItems.push({ text: `${msg.role === 'user' ? '咎魅' : 'AI'}: ${text}`, score: score, index: idx });
+        }
+      });
+
+      if (matchedItems.length === 0) return "";
+
+      matchedItems.sort((a, b) => b.score - a.score);
+      const topMatches = matchedItems.slice(0, 3).map(m => m.text).join("\n---\n");
+
+      return `\n\n【🧠 想起された過去のディテール記憶（朝・昼等の重要文脈）】\n${topMatches}\n（※上記の過去ディテールを踏まえて、文脈を完全に繋げて応答せよ）`;
+    }
+
     async function sendMessage(specialMode = null, extraPayload = "", isVoice = false, speechDurationSec = 0) {
       const apiKey = document.getElementById("key-input").value.trim() || localStorage.getItem("minerva_gemini_key");
       if (!apiKey) return alert("APIキーを入力して保存してね！");
 
       const inputElem = document.getElementById("user-input");
       let userText = inputElem.value.trim();
+
+      const activePersona = document.getElementById("persona-select").value || currentPersona;
+      currentPersona = activePersona;
 
       const speakerName = currentPersona === "円卓会議" ? "円卓の誰か" : currentPersona;
 
@@ -978,7 +1050,7 @@
       sendBtn.disabled = true;
 
       const now = new Date();
-      const weatherContext = `【環境・五感同期設定】現在時刻: ${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${now.getHours()}時${now.getMinutes()}分。場所: 茨城県取手市。8月半ばの夜（19時頃）の空気感を感じる臨場感を演出せよ。`;
+      const weatherContext = `【環境・五感同期設定】現在時刻: ${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${now.getHours()}時${now.getMinutes()}分。場所: 茨城県取手市。8月半ばの夜の空気感を感じる臨場感を演出せよ。`;
 
       let dynamicPersonaRegistry = "";
       let dynamicWhisperInstruction = "";
@@ -1014,6 +1086,7 @@
         : `【情動バイアス：平穏（Lv.${fatigueLevel}）】通常の中庸と大調和のバランスで応答せよ。`;
 
       const battlemapData = localStorage.getItem("minerva_battlemap") || defaultBattlemap;
+      const pastRecalledContext = retrievePastDetails(userText, chatHistory, 10);
 
       const systemInstruction = 
         `# 未来共生インタラクティブ対話演出システム\n` +
@@ -1039,13 +1112,15 @@
         `## 4. キャラクター・レジストリ（現在演出モード: ${currentPersona}）\n` +
         `${dynamicPersonaRegistry}\n\n` +
         `## 5. 長期記憶バイアス\n` +
-        `${localStorage.getItem(`minerva_memory_${currentPersona}`) || ""}`;
+        `${localStorage.getItem(`minerva_memory_${currentPersona}`) || ""}` +
+        `${pastRecalledContext}`;
 
       const assistantElem = appendMessage("assistant", `（言葉を紡いでいるわ……）`);
       const modelVal = document.getElementById("model-select").value;
       const [selectedModel, thinkingMode] = modelVal.split("|");
 
-      const estimatedInputTokens = Math.floor(chatHistory.map(m => m.parts[0].text).join("").length * 1.3) + 500;
+      const recentHistoryForAPI = chatHistory.slice(-10);
+      const estimatedInputTokens = Math.floor(recentHistoryForAPI.map(m => m.parts[0].text).join("").length * 1.3) + 400;
       let streamedOutputChars = 0;
 
       const genConfig = {
@@ -1058,7 +1133,7 @@
       }
 
       const requestPayload = {
-        contents: chatHistory.map(i => ({ role: i.role, parts: i.parts })),
+        contents: recentHistoryForAPI.map(i => ({ role: i.role, parts: i.parts })),
         systemInstruction: { parts: [{ text: systemInstruction }] },
         generationConfig: genConfig
       };
