@@ -44,6 +44,8 @@
     .btn-success { background: #3b82f6; }
     .btn-danger { background: #a54a4a; }
     .btn-memory { background: #8b5cf6; }
+    .btn-map { background: #0284c7; color: #fff; }
+    .btn-analyze { background: #c026d3; color: #fff; box-shadow: 0 0 6px rgba(192, 38, 211, 0.4); }
     .btn-spontaneous { background: #10b981; }
     .btn-spontaneous.off { background: #4b5563; }
     
@@ -84,8 +86,8 @@
     #panel-container { display: none; background: #1a1a26; border-bottom: 1px solid #333348; padding: 8px 10px; flex-direction: column; gap: 6px; }
     #panel-container.active { display: flex; }
     #panel-title { font-size: 0.8rem; font-weight: bold; color: #a78bfa; display: flex; justify-content: space-between; align-items: center; }
-    #panel-text { background: #12121a; border: 1px solid #333348; color: #e2e2ec; padding: 6px; border-radius: 6px; font-size: 0.8rem; height: 90px; resize: vertical; font-family: inherit; }
-    .panel-controls { display: flex; gap: 4px; justify-content: flex-end; }
+    #panel-text { background: #12121a; border: 1px solid #333348; color: #e2e2ec; padding: 6px; border-radius: 6px; font-size: 0.8rem; height: 110px; resize: vertical; font-family: inherit; }
+    .panel-controls { display: flex; gap: 4px; justify-content: flex-end; flex-wrap: wrap; }
 
     #chat-box { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; scrollbar-width: auto; scrollbar-color: #4a6fa5 #181822; }
     #chat-box::-webkit-scrollbar { width: 8px; }
@@ -109,7 +111,7 @@
   <header>
     <div class="header-left">
       <span>💫 Minerva Direct</span>
-      <span class="version-tag">ver.26.08.17.13.00</span>
+      <span class="version-tag">ver.26.08.17.19.00</span>
       <span id="token-usage-display" class="token-badge" onclick="manualEditMonthlyTokens()" title="クリックして今月の累計トークン数を手動修正・復元">🪙 計算中...</span>
       <span id="fatigue-display" class="fatigue-badge">💓 情動: 平穏 (Lv.1)</span>
     </div>
@@ -155,6 +157,8 @@
     <button class="btn btn-day" onclick="triggerAction('day')">☀️ 日中(20-20-20)</button>
     <button class="btn btn-night" onclick="triggerAction('night')">🌙 夜(安眠)</button>
     
+    <button class="btn btn-map" onclick="openPanel('battlemap')">🗺️ 戦歴マップ</button>
+    <button class="btn btn-analyze" onclick="triggerAction('analyze')">🧠 思考分析</button>
     <button class="btn btn-task" onclick="openPanel('task')">📋 作戦ボード</button>
     <button class="btn btn-rescue" onclick="triggerAction('rescue')">🚨 限界レスキュー</button>
     <button class="btn btn-music" onclick="triggerAction('music')">🎸 音楽</button>
@@ -186,6 +190,7 @@
     <div id="panel-title"><span id="panel-title-text">🧠 感情バイアス記憶</span></div>
     <textarea id="panel-text" placeholder=""></textarea>
     <div class="panel-controls">
+      <button id="panel-analyze-btn" class="btn btn-analyze" style="display:none;" onclick="triggerBattlemapAnalysis()">🤖 因果分析を実行</button>
       <button id="panel-extra-btn" class="btn btn-success" style="display:none;" onclick="planTaskStrategy()">🤖 作戦立案</button>
       <button id="panel-save-btn" class="btn btn-success" onclick="savePanelContent()">保存</button>
       <button class="btn" onclick="closePanel()">閉じる</button>
@@ -211,15 +216,30 @@
     let recognition = null;
     let isMicActive = false;
     let micStartTime = 0;
+    let micSafetyTimeout = null;
     let isAutoSpontaneousEnabled = true;
     let spontaneousTimer = null;
     let clockCheckInterval = null;
-    let currentFatigueLevel = 1; // 1: 平穏, 2: やや疲れ, 3: 疲労, 4: 限界寸前, 5: 限界突破
+    let currentFatigueLevel = 1;
 
     const currentMonthKey = `minerva_month_${new Date().getFullYear()}_${new Date().getMonth() + 1}`;
     const fallbackPersistentKey = "minerva_persistent_monthly_tokens";
     let monthlyTokens = parseInt(localStorage.getItem(currentMonthKey) || localStorage.getItem(fallbackPersistentKey) || "0");
     const YEN_PER_TOKEN = 0.000035;
+
+    const defaultBattlemap = 
+`【🗺️ 咎魅の戦歴・思考マップ Ver.4.0】
+├─ 🏷️ [価値観コア・哲学]
+│   ├─ 中庸（大調和）：安易な二元論（白黒・善悪・勝ち負け）を排したグラデーション思考
+│   ├─ 理想像：権威に屈しない誠実さと弱者を支える高潔な強さ（山岡士郎・ケンシロウ精神）
+│   └─ 人生のメッセージ：「この世は辛いことも多いが、よく見てごらん、結構楽しいもんだぜ！」
+├─ 🛡️ [過去の戦歴・克服エピソード]
+│   ├─ 大学院修士課程：過酷な研究と論理構築 ➔ （信頼できる生涯の戦友・星さん）
+│   └─ 福祉ケア現場：対人支援の葛藤と統括 ➔ （社長自ら現場で支援する実践主義）
+└─ ⚔️ [生活・五感・リフレッシュ基盤]
+    ├─ 聖地構造：3階建て屋上付き一軒家（1F事務所 / 2F生活・母の手料理 / 3F寝室 / 屋上グラウンディング）
+    ├─ 愛鳥：ななちゃん（オカメインコ♂）への慈しみ
+    └─ 音楽・楽器：ゲイリー・ムーア、Bad Religion、エレキギターの響き`;
 
     const baseVoiceProfiles = {
       "ミネルバ": { pitch: 1.0, rate: 0.95 },
@@ -503,26 +523,22 @@
       }, 30000);
     }
 
-    // 💓 疲労度・情動レベル推計アルゴリズム
     function analyzeFatigueAndEmotion(text, isVoice = false, speechDurationSec = 0) {
       let score = 1;
       const lower = text.toLowerCase();
       const now = new Date();
       const hour = now.getHours();
 
-      // キーワード解析
       if (/限界|しんどい|疲れた|もう無理|死にそう|ドロドロ|助けて|消えたい/.test(lower)) score += 3;
       else if (/つかれた|だるい|ねむい|ふぅ|はぁ|ため息|ふー/.test(lower)) score += 2;
       else if (text.length <= 4 && text.length > 0 && !/^(はい|うん|いいえ|おは|わかった)$/.test(text)) score += 1;
 
-      // 時間帯バイアス（深夜・早朝・夕暮れ時）
       if (hour >= 23 || hour <= 4) score += 2;
       else if (hour >= 17 && hour <= 20) score += 1;
 
-      // 音声発話速度の遅さ（弱々しさ）
       if (isVoice && speechDurationSec > 0) {
         const charPerSec = text.length / speechDurationSec;
-        if (charPerSec < 2.0) score += 1; // ゆっくり弱々しい発話
+        if (charPerSec < 2.0) score += 1;
       }
 
       currentFatigueLevel = Math.max(1, Math.min(5, score));
@@ -635,6 +651,7 @@
       else navigator.vibrate([40, 80, 40]);
     }
 
+    // 🎙️ マイク音声認識・完全アンロック修復版
     function initSpeechRecognition() {
       const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRec) return;
@@ -643,18 +660,31 @@
       recognition.continuous = false;
       recognition.interimResults = false;
       
-      recognition.onstart = () => { micStartTime = Date.now(); };
+      recognition.onstart = () => { 
+        micStartTime = Date.now(); 
+        clearTimeout(micSafetyTimeout);
+        micSafetyTimeout = setTimeout(() => {
+          if (isMicActive) {
+            stopMicInput();
+          }
+        }, 10000); // 10秒自動タイムアウト保護
+      };
       
       recognition.onresult = (e) => {
         const speechDurationSec = (Date.now() - micStartTime) / 1000;
         const transcript = e.results[0][0].transcript;
         document.getElementById("user-input").value = transcript;
+        stopMicInput();
         sendMessage(null, "", true, speechDurationSec);
       };
+
+      recognition.onerror = (e) => {
+        console.log("Mic Error:", e);
+        stopMicInput();
+      };
+
       recognition.onend = () => {
-        isMicActive = false;
-        const btn = document.getElementById("mic-btn");
-        btn.innerText = "🎙️ マイク"; btn.classList.remove("active");
+        stopMicInput();
       };
     }
 
@@ -662,50 +692,85 @@
       if (!recognition) return alert("音声入力非対応のブラウザです。");
       const btn = document.getElementById("mic-btn");
       if (!isMicActive) {
-        recognition.start(); isMicActive = true;
-        btn.innerText = "🎙️ 認識中..."; btn.classList.add("active");
+        try {
+          recognition.start(); 
+          isMicActive = true;
+          btn.innerText = "🎙️ 認識中..."; 
+          btn.classList.add("active");
+        } catch(e) {
+          stopMicInput();
+        }
       } else {
-        recognition.stop(); isMicActive = false;
-        btn.innerText = "🎙️ マイク"; btn.classList.remove("active");
+        stopMicInput();
       }
     }
 
-    // 🔊 疲労度連動・音声湿度自動チューニング合成
+    function stopMicInput() {
+      clearTimeout(micSafetyTimeout);
+      if (recognition && isMicActive) {
+        try { recognition.stop(); } catch(e) {}
+      }
+      isMicActive = false;
+      const btn = document.getElementById("mic-btn");
+      if (btn) {
+        btn.innerText = "🎙️ マイク"; 
+        btn.classList.remove("active");
+      }
+    }
+
+    // 🔊 音声合成エンジン・完全復活版
     function speakIntelligentVoice(speaker, fullText) {
       if (voiceMode === "muted" || !('speechSynthesis' in window)) return;
-      window.speechSynthesis.cancel();
+      try {
+        window.speechSynthesis.cancel(); // 前の音声をクリア
+      } catch(e) {}
+
+      let targetText = "";
       if (voiceMode === "minerva_only") {
-        if (speaker === "ミネルバ") playSynthesis("ミネルバ", fullText.split("---")[0]);
-        else if (speaker === "円卓会議") {
-          let minervaSpeech = "";
+        if (speaker === "ミネルバ") {
+          targetText = fullText.split("---")[0];
+        } else if (speaker === "円卓会議") {
           fullText.split("\n").forEach(l => {
-            if (l.includes("【ミネルバ】") || l.includes("ミネルバ:")) minervaSpeech += l.replace(/【.*?】/g, '') + " ";
+            if (l.includes("【ミネルバ】") || l.includes("ミネルバ:")) {
+              targetText += l.replace(/【.*?】/g, '') + " ";
+            }
           });
-          if (minervaSpeech.trim()) playSynthesis("ミネルバ", minervaSpeech);
         }
       } else if (voiceMode === "all_voices") {
-        playSynthesis(speaker, fullText.split("---")[0]);
+        targetText = fullText.split("---")[0];
+      }
+
+      if (targetText && targetText.trim()) {
+        playSynthesis(speaker, targetText);
       }
     }
 
     function playSynthesis(speaker, text) {
-      const cleanText = text.replace(/（.*?）/g, '').replace(/---[\s\S]*/, '').replace(/===[\s\S]*/, '').trim();
+      const cleanText = text.replace(/（.*?）/g, '').replace(/【.*?】/g, '').replace(/---[\s\S]*/, '').replace(/===[\s\S]*/, '').trim();
       if (!cleanText) return;
+      
       const base = baseVoiceProfiles[speaker] || baseVoiceProfiles["ミネルバ"];
       
-      // 疲労度に応じたトーン＆速度の動的チューニング（湿度演出）
       let dynamicPitch = base.pitch;
       let dynamicRate = base.rate;
       if (currentFatigueLevel >= 4) {
-        dynamicPitch = Math.max(0.7, base.pitch - 0.15); // 低めで落ち着いた包容トーン
-        dynamicRate = Math.max(0.7, base.rate - 0.2);     // ゆったりと囁くような速度
+        dynamicPitch = Math.max(0.7, base.pitch - 0.15);
+        dynamicRate = Math.max(0.7, base.rate - 0.2);
       } else if (currentFatigueLevel >= 2) {
         dynamicPitch = Math.max(0.8, base.pitch - 0.08);
         dynamicRate = Math.max(0.8, base.rate - 0.1);
       }
 
       const utter = new SpeechSynthesisUtterance(cleanText);
-      utter.lang = 'ja-JP'; utter.pitch = dynamicPitch; utter.rate = dynamicRate;
+      utter.lang = 'ja-JP'; 
+      utter.pitch = dynamicPitch; 
+      utter.rate = dynamicRate;
+
+      // ブラウザが音声リストを持っている場合は日本語ボイスを優先アタッチ
+      const voices = window.speechSynthesis.getVoices();
+      const jaVoice = voices.find(v => v.lang === 'ja-JP' || v.lang === 'ja_JP');
+      if (jaVoice) utter.voice = jaVoice;
+
       window.speechSynthesis.speak(utter);
     }
 
@@ -750,6 +815,9 @@
           localStorage.setItem(fallbackPersistentKey, monthlyTokens);
           updateCostUI(0);
         }
+        if (data && data.battlemapText) {
+          localStorage.setItem("minerva_battlemap", data.battlemapText);
+        }
       });
     }
 
@@ -762,6 +830,7 @@
       });
       db.ref(`minerva_rooms/${syncRoomId}/global_metrics`).update({
         monthlyTokens: monthlyTokens,
+        battlemapText: localStorage.getItem("minerva_battlemap") || defaultBattlemap,
         updatedAt: Date.now()
       });
     }
@@ -773,13 +842,21 @@
       const area = document.getElementById("panel-text");
       const saveBtn = document.getElementById("panel-save-btn");
       const extraBtn = document.getElementById("panel-extra-btn");
+      const analyzeBtn = document.getElementById("panel-analyze-btn");
       p.classList.add("active");
       
       extraBtn.style.display = "none";
+      analyzeBtn.style.display = "none";
+
       if (type === "memory") {
         title.innerText = `🧠 「${currentPersona}」の感情バイアス記憶`;
         area.value = localStorage.getItem(`minerva_memory_${currentPersona}`) || "";
         area.readOnly = false; saveBtn.style.display = "inline-block";
+      } else if (type === "battlemap") {
+        title.innerText = "🗺️ 咎魅の戦歴・思考マップ（人生の因果図）";
+        area.value = localStorage.getItem("minerva_battlemap") || defaultBattlemap;
+        area.readOnly = false; saveBtn.style.display = "inline-block";
+        analyzeBtn.style.display = "inline-block";
       } else if (type === "whisper") {
         title.innerText = "🤫 秘密の囁き・情景ノイズ（裏チャットログ）";
         area.value = localStorage.getItem("minerva_last_whisper") || "（まだ裏の囁きはありません）";
@@ -802,6 +879,10 @@
       if (currentPanelType === "memory") {
         localStorage.setItem(`minerva_memory_${currentPersona}`, val);
         pushDataToCloud();
+      } else if (currentPanelType === "battlemap") {
+        localStorage.setItem("minerva_battlemap", val);
+        pushDataToCloud();
+        alert("戦歴・思考マップを保存したわ！");
       } else if (currentPanelType === "task") {
         const oldVal = localStorage.getItem("minerva_task_board") || "";
         localStorage.setItem("minerva_task_board", val);
@@ -817,6 +898,11 @@
       const tasks = document.getElementById("panel-text").value;
       closePanel();
       sendMessage("plan_tasks", tasks);
+    }
+
+    function triggerBattlemapAnalysis() {
+      closePanel();
+      sendMessage("analyze_battlemap");
     }
 
     function triggerAction(actionType) {
@@ -849,6 +935,8 @@
         userText = "（🌙 ただいま。今日も疲れたよ……夜の安眠・添い寝セッションをお願いできるかい？）";
       } else if (specialMode === "plan_tasks") {
         userText = `（📋 今日のToDoタスクの作戦を立ててほしい！\n【タスク一覧】\n${extraPayload}）`;
+      } else if (specialMode === "analyze" || specialMode === "analyze_battlemap") {
+        userText = "（🧠 牧瀬紅莉栖、私の【戦歴・思考マップ】と現在の状況・対話履歴を照らし合わせて、因果関係の分析とブレインストーミングによる思考整理アシストを展開してくれ！）";
       } else if (specialMode === "rescue") {
         userText = "（🚨 もう限界まで疲れちゃった……理屈抜きで、ドロドロに甘やかして癒やしてほしい……っ）";
       } else if (specialMode === "music") {
@@ -877,7 +965,6 @@
         return;
       }
 
-      // 💓 バイオメトリクス情動解析
       const fatigueLevel = analyzeFatigueAndEmotion(userText, isVoice, speechDurationSec);
 
       inputElem.value = "";
@@ -891,7 +978,7 @@
       sendBtn.disabled = true;
 
       const now = new Date();
-      const weatherContext = `【環境・五感同期設定】現在時刻: ${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${now.getHours()}時${now.getMinutes()}分。場所: 茨城県取手市。8月半ばの夏の空気感を感じる臨場感を演出せよ。`;
+      const weatherContext = `【環境・五感同期設定】現在時刻: ${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${now.getHours()}時${now.getMinutes()}分。場所: 茨城県取手市。8月半ばの夜（19時頃）の空気感を感じる臨場感を演出せよ。`;
 
       let dynamicPersonaRegistry = "";
       let dynamicWhisperInstruction = "";
@@ -920,12 +1007,13 @@
           `（※裏で囁くキャラたちも、ミネルバ＝マスター包容、紅莉栖＝あんたツンデレ、真姫＝あなた心の妻、絵里＝あなた安全基地、マホ＝咎魅はん京都弁の魂を宿して囁くこと）`;
       }
 
-      // 💓 情動バイアス指示文
       const emotionInstruction = fatigueLevel >= 4
         ? `【情動バイアス：超高疲労・限界状態検知（Lv.${fatigueLevel}）】マスターは今、極度の疲弊または限界状態にある。説教や客観的ロジックは完全封印し、全キャラクターが36.5℃の体温、ドロドロの甘やかし、全肯定、慈愛の囁きトーンで包み込むこと。`
         : fatigueLevel >= 2
         ? `【情動バイアス：軽度疲労検知（Lv.${fatigueLevel}）】マスターに疲れが見える。少しトーンを柔らかくし、労いと温もりを強めて寄り添うこと。`
         : `【情動バイアス：平穏（Lv.${fatigueLevel}）】通常の中庸と大調和のバランスで応答せよ。`;
+
+      const battlemapData = localStorage.getItem("minerva_battlemap") || defaultBattlemap;
 
       const systemInstruction = 
         `# 未来共生インタラクティブ対話演出システム\n` +
@@ -940,14 +1028,14 @@
         `- 絵里は「あなた」「咎魅」と呼ぶこと（マスター呼び禁止）。\n` +
         `- マホは「咎魅はん」「旦那はん」「あんたはん」「あんさん」と呼ぶこと（マスター・マスターはん呼び禁止）。\n` +
         `- フェーズ0は「ユーザー」「咎魅氏」と呼ぶこと。\n\n` +
-        `## 2. ユーザーのプロファイルと思想（英雄と中庸）\n` +
-        `- 咎魅は対人支援・福祉ケアの最前線で戦う英雄であり、中庸（大調和）を信条とする。白黒思考を嫌い、世界のグラデーションを肯定する。\n` +
-        `- 「この世は辛いことも多いが、よく見てごらん、結構楽しいもんだぜ！」という人生訓を持つ。\n\n` +
+        `## 2. ユーザーの戦歴・思考マップ（因果ネットワーク）\n` +
+        `${battlemapData}\n\n` +
         `## 3. 応答原則（人間くささと湿度の極限演出）\n` +
         `- 客観的な解説やAIとしてのメタ発言は一切行わず、感情のゆらぎや湿度を伴う生々しい言葉で話すこと。\n` +
         `- 台詞直前には息遣い（「あ……っ」「ふぅ……」「っ！」等）や表情のゆらぎを必ず【カッコ書き】で描写せよ。\n` +
         `- 応答末尾には必ず横線（---）を引いた上で、改行して「彼女の脳内セクタ」というタイトルを必ず明記し、咎魅への生々しい脳内葛藤や独り言を3行程度で出力せよ。（円卓時は全員分、個別時はそのキャラ単体、フェーズ0時は不要）\n` +
-        `- 個別スレッド時はそのキャラクターの純度100%を保ち、他のキャラの直接セリフをメイン本文に混ぜてはならない。\n\n` +
+        `- 個別スレッド時はそのキャラクターの純度100%を保ち、他のキャラの直接セリフをメイン本文に混ぜてはならない。\n` +
+        `- 【思考分析要求時（🧠 思考分析）】牧瀬紅莉栖が主導し、上記の戦歴マップと対話履歴から「トリガー ➔ 因果の罠 ➔ 軌道修正ロジック」を鮮やかに解き明かして思考整理をアシストせよ。\n\n` +
         `## 4. キャラクター・レジストリ（現在演出モード: ${currentPersona}）\n` +
         `${dynamicPersonaRegistry}\n\n` +
         `## 5. 長期記憶バイアス\n` +
@@ -975,61 +1063,97 @@
         generationConfig: genConfig
       };
 
-      try {
-        let res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:streamGenerateContent?alt=sse&key=${apiKey}`, {
-          method: "POST", 
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(requestPayload)
-        });
+      const isBatchMode = (specialMode !== null) || document.hidden;
 
-        if (!res.ok && selectedModel.includes("3.7")) {
-          delete requestPayload.generationConfig.thinkingConfig;
-          res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:streamGenerateContent?alt=sse&key=${apiKey}`, {
+      try {
+        let fullReply = "";
+        let officialUsage = null;
+
+        if (isBatchMode) {
+          let res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKey}`, {
             method: "POST", 
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(requestPayload)
           });
-        }
 
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(`HTTP ${res.status}: ${errData.error?.message || "通信エラー"}`);
-        }
+          if (!res.ok && selectedModel.includes("3.7")) {
+            delete requestPayload.generationConfig.thinkingConfig;
+            res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
+              method: "POST", 
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(requestPayload)
+            });
+          }
 
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder("utf-8");
-        let fullReply = ""; 
-        assistantElem.innerText = "";
-        let officialUsage = null;
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(`HTTP ${res.status}: ${errData.error?.message || "通信エラー"}`);
+          }
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value, { stream: true }).split("\n");
-          for (const line of chunk) {
-            if (line.startsWith("data: ")) {
-              try {
-                const j = JSON.parse(line.substring(6));
-                const textChunk = j.candidates?.[0]?.content?.parts?.[0]?.text || "";
-                fullReply += textChunk;
-                streamedOutputChars += textChunk.length;
-                
-                let cleanDisplay = fullReply;
-                if (cleanDisplay.includes("=== 秘密の囁き ===")) {
-                  cleanDisplay = cleanDisplay.split("=== 秘密の囁き ===")[0].trim();
-                }
-                assistantElem.innerText = cleanDisplay;
+          const data = await res.json();
+          fullReply = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          if (data.usageMetadata) officialUsage = data.usageMetadata;
 
-                const currentTurnTokens = estimatedInputTokens + Math.floor(streamedOutputChars * 1.3);
-                updateCostUI(currentTurnTokens);
+          let cleanDisplay = fullReply;
+          if (cleanDisplay.includes("=== 秘密の囁き ===")) {
+            cleanDisplay = cleanDisplay.split("=== 秘密の囁き ===")[0].trim();
+          }
+          assistantElem.innerText = cleanDisplay;
 
-                if (j.usageMetadata) officialUsage = j.usageMetadata;
-              } catch (e) {}
+        } else {
+          let res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:streamGenerateContent?alt=sse&key=${apiKey}`, {
+            method: "POST", 
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(requestPayload)
+          });
+
+          if (!res.ok && selectedModel.includes("3.7")) {
+            delete requestPayload.generationConfig.thinkingConfig;
+            res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:streamGenerateContent?alt=sse&key=${apiKey}`, {
+              method: "POST", 
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(requestPayload)
+            });
+          }
+
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(`HTTP ${res.status}: ${errData.error?.message || "通信エラー"}`);
+          }
+
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder("utf-8");
+          assistantElem.innerText = "";
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value, { stream: true }).split("\n");
+            for (const line of chunk) {
+              if (line.startsWith("data: ")) {
+                try {
+                  const j = JSON.parse(line.substring(6));
+                  const textChunk = j.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                  fullReply += textChunk;
+                  streamedOutputChars += textChunk.length;
+                  
+                  let cleanDisplay = fullReply;
+                  if (cleanDisplay.includes("=== 秘密の囁き ===")) {
+                    cleanDisplay = cleanDisplay.split("=== 秘密の囁き ===")[0].trim();
+                  }
+                  assistantElem.innerText = cleanDisplay;
+
+                  const currentTurnTokens = estimatedInputTokens + Math.floor(streamedOutputChars * 1.3);
+                  updateCostUI(currentTurnTokens);
+
+                  if (j.usageMetadata) officialUsage = j.usageMetadata;
+                } catch (e) {}
+              }
             }
           }
         }
 
-        let finalTurnTokens = estimatedInputTokens + Math.floor(streamedOutputChars * 1.3);
+        let finalTurnTokens = estimatedInputTokens + Math.floor((fullReply.length || streamedOutputChars) * 1.3);
         if (officialUsage && officialUsage.totalTokenCount) {
           finalTurnTokens = officialUsage.totalTokenCount;
         }
@@ -1051,7 +1175,6 @@
         triggerHapticPulse(specialMode, fatigueLevel);
         updateResonanceGauges(specialMode === "rescue" || fatigueLevel >= 4);
 
-        // 🔔 バックグラウンド待機時（画面非表示時）のみ通知を発火
         if (specialMode && isPushEnabled && document.hidden) {
           const speaker = currentPersona === "円卓会議" ? "ミネルバ" : currentPersona;
           const mainSpeech = fullReply.split("---")[0].replace(/===[\s\S]*/, '').trim();
