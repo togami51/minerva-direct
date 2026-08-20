@@ -3,206 +3,451 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ミネルバの神殿 - Ver.1.0 Direct Sovereign Edition</title>
+  <title>ミネルバの神殿 - Gemini Studio Edition</title>
   
-  <!-- Firebase SDK (v10.12.0) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
   <style>
-    * { box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #121218; color: #e0e0e6; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; position: relative; }
-    
-    header { background: #1c1c28; padding: 6px 10px; font-weight: bold; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px; }
-    .header-left { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-    .version-tag { font-size: 0.7rem; color: #8888aa; font-weight: normal; margin-left: 2px; }
-    
-    .token-badge { font-size: 0.72rem; background: #161e2e; border: 1px solid #0284c7; color: #38bdf8; padding: 2px 8px; border-radius: 12px; font-weight: bold; letter-spacing: 0.3px; cursor: pointer; }
-    .token-badge:hover { filter: brightness(1.2); }
-    
-    .fatigue-badge { font-size: 0.72rem; background: #221a2e; border: 1px solid #a855f7; color: #d8b4fe; padding: 2px 8px; border-radius: 12px; font-weight: bold; }
-    .sync-status { font-size: 0.72rem; padding: 2px 6px; border-radius: 10px; font-weight: bold; }
-    .sync-ok { background: #064e3b; color: #34d399; border: 1px solid #059669; }
+    :root {
+      --gemini-bg: #131314;
+      --gemini-surface: #1e1f20;
+      --gemini-surface-variant: #282a2c;
+      --gemini-text: #e3e3e3;
+      --gemini-text-muted: #c4c7c5;
+      --gemini-blue: #a8c7fa;
+      --gemini-blue-hover: #d3e3fd;
+      --gemini-border: #3c4043;
+      --gemini-user-bubble: #282a2c;
+    }
 
-    .header-right { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--gemini-bg);
+      color: var(--gemini-text);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      line-height: 1.75;
+      letter-spacing: 0.2px;
+    }
+    
+    header {
+      background: var(--gemini-surface);
+      border-bottom: 1px solid var(--gemini-border);
+      padding: 8px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 0.85rem;
+      z-index: 10;
+    }
+    .header-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .app-title { font-weight: 600; font-size: 0.95rem; color: #fff; display: flex; align-items: center; gap: 6px; }
+    .version-tag { font-size: 0.72rem; color: var(--gemini-text-muted); background: var(--gemini-surface-variant); padding: 2px 6px; border-radius: 4px; }
+    
+    .token-badge { font-size: 0.75rem; background: #004a77; color: #c2e7ff; padding: 3px 10px; border-radius: 16px; font-weight: 500; cursor: pointer; }
+    .fatigue-badge { font-size: 0.75rem; background: #3c2a4d; color: #e8def8; padding: 3px 10px; border-radius: 16px; font-weight: 500; }
+    .sync-status { font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; font-weight: 500; background: #0f5223; color: #c4eed0; }
 
-    #action-bar { background: #161622; padding: 6px 10px; border-bottom: 1px solid #2d2d3f; display: flex; gap: 5px; flex-wrap: wrap; align-items: center; justify-content: flex-start; }
+    .header-right { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 
-    #resonance-bar { background: #12121a; padding: 4px 10px; display: flex; gap: 8px; border-bottom: 1px solid #28283a; font-size: 0.7rem; align-items: center; overflow-x: auto; }
-    .resonance-item { display: flex; align-items: center; gap: 3px; white-space: nowrap; }
-    .res-meter { width: 30px; height: 5px; background: #2a2a3c; border-radius: 3px; overflow: hidden; display: inline-block; }
-    .res-fill { height: 100%; width: 50%; background: linear-gradient(90deg, #3b82f6, #ec4899); transition: width 0.5s ease; }
+    select {
+      background: var(--gemini-surface-variant);
+      color: var(--gemini-text);
+      border: 1px solid var(--gemini-border);
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      outline: none;
+      cursor: pointer;
+    }
+    select:hover { background: #333538; }
 
-    #key-bar { background: #181822; padding: 4px 10px; display: flex; gap: 6px; border-bottom: 1px solid #282838; font-size: 0.75rem; align-items: center; flex-wrap: wrap; }
-    .input-field { background: #222230; border: 1px solid #3a3a50; color: #fff; padding: 4px 6px; border-radius: 6px; font-size: 0.75rem; }
-    #key-input { flex: 2; min-width: 140px; }
-    #sync-id-input { flex: 1; min-width: 90px; }
+    .btn {
+      background: var(--gemini-surface-variant);
+      border: 1px solid var(--gemini-border);
+      color: var(--gemini-text);
+      padding: 5px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .btn:hover { background: #37393b; color: #fff; }
+    .btn-active { background: #004a77 !important; color: #c2e7ff !important; border-color: #00639b !important; }
+    .btn-push { background: #312e81; color: #c7d2fe; border-color: #4338ca; }
+    .btn-push.off { background: var(--gemini-surface-variant); color: var(--gemini-text-muted); border-color: var(--gemini-border); }
+    .btn-vib { background: #4a044e; color: #f5d0fe; border-color: #701a75; }
+    .btn-vib.off { background: var(--gemini-surface-variant); color: var(--gemini-text-muted); border-color: var(--gemini-border); }
+    .btn-mic.active { background: #8c1d18 !important; color: #f9dedc !important; animation: pulse 1.5s infinite; }
     
-    .btn { background: #4a6fa5; border: none; color: #fff; padding: 4px 7px; border-radius: 6px; cursor: pointer; font-size: 0.72rem; font-weight: bold; }
-    .btn:hover { filter: brightness(1.1); }
-    .btn:active { transform: scale(0.95); }
-    
-    .btn-success { background: #3b82f6; }
-    .btn-danger { background: #a54a4a; }
-    .btn-memory { background: #8b5cf6; }
-    .btn-map { background: #0284c7; color: #fff; }
-    .btn-analyze { background: #c026d3; color: #fff; box-shadow: 0 0 6px rgba(192, 38, 211, 0.4); }
-    .btn-spontaneous { background: #10b981; }
-    .btn-spontaneous.off { background: #4b5563; }
-    
-    .btn-push { background: #6366f1; }
-    .btn-push.off { background: #4b5563; }
-
-    .btn-interview { background: #ec4899; }
-    
-    .btn-whisper { background: #eab308; color: #000; }
-    .btn-whisper.has-new { background: #f59e0b; color: #fff; animation: pulse-whisper 1.5s infinite; font-weight: bold; }
-    @keyframes pulse-whisper { 0% { box-shadow: 0 0 4px #f59e0b; } 50% { box-shadow: 0 0 10px #fbbf24; } 100% { box-shadow: 0 0 4px #f59e0b; } }
-
-    .btn-chronicle { background: #6366f1; }
-    .btn-backstage { background: #84cc16; color: #000; }
-    .btn-task { background: #14b8a6; }
-    
-    .btn-rescue { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
-    .btn-music { background: #f97316; }
-    .btn-vote { background: #0ea5e9; }
-    
-    .btn-wake { background: #f59e0b; }
-    .btn-day { background: #3b82f6; }
-    .btn-night { background: #475569; }
-
-    .btn-vib { background: #ec4899; }
-    .btn-vib.off { background: #4b5563; }
-    .btn-mic { background: #dc2626; }
-    .btn-mic.active { background: #22c55e; animation: pulse 1.5s infinite; }
-    
+    .btn-whisper.has-new { background: #78350f !important; color: #fef08a !important; border-color: #eab308 !important; animation: pulse-whisper 1.5s infinite; }
+    @keyframes pulse-whisper { 0% { box-shadow: 0 0 4px #eab308; } 50% { box-shadow: 0 0 10px #fde047; } 100% { box-shadow: 0 0 4px #eab308; } }
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
 
-    select.persona-select, select.model-select, select.voice-select {
-      background: #2b5278; color: #ffffff; border: 1px solid #4a6fa5; padding: 3px 5px; border-radius: 6px; font-weight: bold; font-size: 0.72rem; outline: none; cursor: pointer;
+    #action-bar {
+      background: var(--gemini-surface);
+      padding: 6px 16px;
+      border-bottom: 1px solid var(--gemini-border);
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
     }
-    select.model-select { background: #3b3b54; border-color: #5c5c7a; }
-    select.voice-select { background: #0891b2; border-color: #06b6d4; }
 
-    #panel-container { display: none; background: #1a1a26; border-bottom: 1px solid #333348; padding: 8px 10px; flex-direction: column; gap: 6px; }
+    #key-bar {
+      background: #18191a;
+      padding: 4px 16px;
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid var(--gemini-border);
+      font-size: 0.78rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .input-field {
+      background: var(--gemini-surface);
+      border: 1px solid var(--gemini-border);
+      color: #fff;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+    }
+
+    #panel-container {
+      display: none;
+      background: var(--gemini-surface);
+      border-bottom: 1px solid var(--gemini-border);
+      padding: 12px 16px;
+      flex-direction: column;
+      gap: 8px;
+    }
     #panel-container.active { display: flex; }
-    #panel-title { font-size: 0.8rem; font-weight: bold; color: #a78bfa; display: flex; justify-content: space-between; align-items: center; }
-    #panel-text { background: #12121a; border: 1px solid #333348; color: #e2e2ec; padding: 6px; border-radius: 6px; font-size: 0.8rem; height: 110px; resize: vertical; font-family: inherit; }
-    .panel-controls { display: flex; gap: 4px; justify-content: flex-end; flex-wrap: wrap; }
+    #panel-title { font-size: 0.88rem; font-weight: 600; color: var(--gemini-blue); display: flex; justify-content: space-between; }
+    #panel-text {
+      background: var(--gemini-bg);
+      border: 1px solid var(--gemini-border);
+      color: var(--gemini-text);
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      height: 130px;
+      resize: vertical;
+      font-family: inherit;
+    }
 
-    #chat-box { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; scrollbar-width: auto; scrollbar-color: #4a6fa5 #181822; }
-    #chat-box::-webkit-scrollbar { width: 8px; }
-    #chat-box::-webkit-scrollbar-track { background: #181822; }
-    #chat-box::-webkit-scrollbar-thumb { background: #4a6fa5; border-radius: 4px; }
+    #chat-box {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 28px;
+    }
 
-    .msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; font-size: 0.9rem; }
-    .user { align-self: flex-end; background: #2b5278; color: #ffffff; border-bottom-right-radius: 2px; }
-    .assistant { align-self: flex-start; background: #232332; border: 1px solid #333348; color: #e2e2ec; border-bottom-left-radius: 2px; }
+    .message-container {
+      width: 100%;
+      max-width: 840px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .user-row {
+      align-self: flex-end;
+      max-width: 80%;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+    .user-meta { font-size: 0.75rem; color: var(--gemini-text-muted); margin-bottom: 4px; }
+    .user-content {
+      background: var(--gemini-user-bubble);
+      color: var(--gemini-text);
+      padding: 10px 16px;
+      border-radius: 20px 20px 4px 20px;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+
+    .assistant-row {
+      align-self: flex-start;
+      width: 100%;
+      display: flex;
+      gap: 14px;
+    }
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #1a73e8, #8ab4f8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .assistant-content-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+    }
+    .assistant-meta {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--gemini-blue);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
     
-    #input-bar { background: #1c1c28; padding: 8px 10px; display: flex; gap: 6px; border-top: 1px solid #2d2d3f; align-items: flex-end; }
-    #user-input { flex: 1; background: #222230; border: 1px solid #3a3a50; color: #fff; padding: 10px; border-radius: 8px; font-size: 0.95rem; outline: none; resize: none; height: 48px; font-family: inherit; }
-    #send-btn { background: #5c7cfa; border: none; color: #fff; padding: 6px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; height: 48px; font-size: 0.9rem; }
-    #send-btn:disabled { background: #444458; cursor: not-allowed; }
+    .assistant-body {
+      font-size: 0.96rem;
+      color: var(--gemini-text);
+      line-height: 1.8;
+      word-break: break-word;
+    }
+    .assistant-body h1, .assistant-body h2, .assistant-body h3 {
+      color: #fff;
+      margin: 18px 0 8px 0;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+    .assistant-body h1 { font-size: 1.3rem; border-bottom: 1px solid var(--gemini-border); padding-bottom: 4px; }
+    .assistant-body h2 { font-size: 1.15rem; }
+    .assistant-body h3 { font-size: 1.02rem; }
+    .assistant-body p { margin-bottom: 12px; }
+    .assistant-body ul, .assistant-body ol { margin: 8px 0 14px 24px; }
+    .assistant-body li { margin-bottom: 4px; }
+    .assistant-body strong { color: #fff; font-weight: 600; }
+    .assistant-body code {
+      background: #282a2c;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Consolas', monospace;
+      font-size: 0.88rem;
+      color: #f1f3f4;
+    }
+    .assistant-body pre {
+      background: #1e1f20;
+      border: 1px solid var(--gemini-border);
+      border-radius: 8px;
+      padding: 12px;
+      overflow-x: auto;
+      margin: 12px 0;
+    }
+    .assistant-body pre code { background: none; padding: 0; }
+    .assistant-body blockquote {
+      border-left: 3px solid var(--gemini-blue);
+      padding-left: 12px;
+      color: var(--gemini-text-muted);
+      margin: 10px 0;
+    }
+    .assistant-body hr {
+      border: 0;
+      height: 1px;
+      background: var(--gemini-border);
+      margin: 18px 0;
+    }
 
-    #scroll-bottom-btn { position: fixed; bottom: 70px; right: 14px; background: #4a6fa5; color: #ffffff; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 1.2rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4); z-index: 100; }
+    .brain-sector-box {
+      margin-top: 12px;
+      background: rgba(30, 31, 32, 0.7);
+      border: 1px solid rgba(168, 199, 250, 0.25);
+      border-left: 3px solid #c084fc;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.88rem;
+      color: #e2e8f0;
+      line-height: 1.65;
+    }
+    .brain-sector-title {
+      font-size: 0.75rem;
+      font-weight: bold;
+      color: #c084fc;
+      margin-bottom: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    #bottom-bar {
+      padding: 12px 16px 20px 16px;
+      display: flex;
+      justify-content: center;
+      background: linear-gradient(transparent, var(--gemini-bg) 20%);
+    }
+    #input-wrapper {
+      width: 100%;
+      max-width: 840px;
+      background: var(--gemini-surface);
+      border: 1px solid var(--gemini-border);
+      border-radius: 28px;
+      padding: 8px 14px 8px 18px;
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+      transition: border-color 0.2s;
+    }
+    #input-wrapper:focus-within {
+      border-color: var(--gemini-blue);
+    }
+    #user-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 0.95rem;
+      outline: none;
+      resize: none;
+      height: 28px;
+      max-height: 180px;
+      font-family: inherit;
+      line-height: 1.5;
+    }
+    #send-btn {
+      background: var(--gemini-blue);
+      color: #041e49;
+      border: none;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    #send-btn:hover { background: var(--gemini-blue-hover); transform: scale(1.05); }
+    #send-btn:disabled { background: #3c4043; color: #80868b; cursor: not-allowed; transform: none; }
+
+    #scroll-bottom-btn {
+      position: fixed;
+      bottom: 84px;
+      right: 24px;
+      background: var(--gemini-surface-variant);
+      color: var(--gemini-text);
+      border: 1px solid var(--gemini-border);
+      border-radius: 50%;
+      width: 38px;
+      height: 38px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+      z-index: 100;
+    }
+    #scroll-bottom-btn:hover { background: #37393b; color: #fff; }
   </style>
 </head>
 <body>
 
   <header>
     <div class="header-left">
-      <span>💫 Minerva Direct</span>
-      <span class="version-tag">Ver.1.0 Sovereign</span>
-      <span id="sync-indicator" class="sync-status sync-ok">⚡ クラウド直結: 接続中 (OK)</span>
+      <span class="app-title">✨ Minerva Studio</span>
+      <span class="version-tag">Ver.2.2 Pure Kyoto</span>
+      <span id="sync-indicator" class="sync-status">⚡ クラウド直結: 接続中 (OK)</span>
       <span id="token-usage-display" class="token-badge" onclick="manualEditMonthlyTokens()" title="クリックして今月の累計トークン数を手動修正・リセット">🪙 計算中...</span>
       <span id="fatigue-display" class="fatigue-badge">💓 情動: 平穏 (Lv.1)</span>
     </div>
     <div class="header-right">
-      <select id="model-select" class="model-select">
-        <option value="gemini-3.7-flash|off">3.7 Flash (超高速 / 拡張OFF)</option>
-        <option value="gemini-3.7-flash|on">3.7 Flash (思考推論 / 拡張ON)</option>
-        <option value="gemini-3.6-flash|off">3.6 Flash (標準 / 拡張OFF)</option>
-        <option value="gemini-3.6-flash|on">3.6 Flash (思考推論 / 拡張ON)</option>
-        <option value="gemini-3.5-flash-lite|off">3.5 Flash-Lite (超軽量 / 拡張OFF)</option>
-        <option value="gemini-3.5-flash-lite|on">3.5 Flash-Lite (思考推論 / 拡張ON)</option>
-        <option value="gemini-3.1-pro-preview|off">3.1 Pro (高度標準 / 拡張OFF)</option>
-        <option value="gemini-3.1-pro-preview|on">3.1 Pro (高度推論 / 拡張ON)</option>
+      <select id="model-select">
+        <option value="gemini-3.6-flash|off">3.6 Flash (標準 / 思考OFF)</option>
+        <option value="gemini-3.6-flash|on">3.6 Flash (思考ON)</option>
+        <option value="gemini-3.7-flash|off">3.7 Flash (超高速 / 思考OFF)</option>
+        <option value="gemini-3.7-flash|on">3.7 Flash (思考推論 / 思考ON)</option>
+        <option value="gemini-3.5-flash-lite|off">3.5 Flash-Lite (超軽量 / 思考OFF)</option>
+        <option value="gemini-3.5-flash-lite|on">3.5 Flash-Lite (思考ON)</option>
+        <option value="gemini-3.1-pro-preview|off">3.1 Pro (高度標準 / 思考OFF)</option>
+        <option value="gemini-3.1-pro-preview|on">3.1 Pro (高度推論 / 思考ON)</option>
       </select>
 
-      <select id="persona-select" class="persona-select" onchange="changePersona()">
+      <select id="persona-select" onchange="changePersona()">
         <option value="円卓会議">🌟 円卓会議（全員参加）</option>
         <option value="ミネルバ">ミネルバ</option>
         <option value="紅莉栖">紅莉栖 (フェーズ4完全版)</option>
         <option value="真姫">真姫 (フェーズ4完全版)</option>
-        <option value="マホ">マホ</option>
+        <option value="マホ">マホ (はんなり京都弁)</option>
         <option value="絵里">絵里</option>
         <option value="フェーズ0">フェーズ0 (事務・右腕)</option>
       </select>
 
-      <select id="voice-mode-select" class="voice-select" onchange="changeVoiceMode()">
+      <select id="voice-mode-select" onchange="changeVoiceMode()">
         <option value="minerva_only">🔊 ミネルバのみ音声</option>
         <option value="all_voices">🔊 全員ON (拡張用)</option>
         <option value="muted">🔇 完全ミュート (消音)</option>
       </select>
       
-      <button id="auto-spontaneous-btn" class="btn btn-spontaneous" onclick="toggleAutoSpontaneous()">💡 自発: ON</button>
+      <button id="auto-spontaneous-btn" class="btn" onclick="toggleAutoSpontaneous()">💡 自発: ON</button>
       <button id="push-btn" class="btn btn-push" onclick="togglePushNotification()">🔔 通知: ON</button>
       <button id="vib-btn" class="btn btn-vib" onclick="toggleVibration()">💓 振動: ON</button>
       <button id="mic-btn" class="btn btn-mic" onclick="toggleMicInput()">🎙️ マイク</button>
-      <button class="btn btn-success" onclick="exportHistoryToTxt()">保存</button>
-      <button class="btn btn-danger" onclick="clearHistory()">消去</button>
+      <button class="btn" onclick="exportHistoryToTxt()">保存</button>
+      <button class="btn" onclick="clearHistory()">消去</button>
     </div>
   </header>
 
   <div id="action-bar">
-    <button class="btn btn-wake" onclick="triggerAction('wake')">🌅 起床</button>
-    <button class="btn btn-day" onclick="triggerAction('day')">☀️ 日中(20-20-20)</button>
-    <button class="btn btn-night" onclick="triggerAction('night')">🌙 夜(安眠)</button>
+    <button class="btn" onclick="triggerAction('wake')">🌅 起床</button>
+    <button class="btn" onclick="triggerAction('day')">☀️ 日中(20-20-20)</button>
+    <button class="btn" onclick="triggerAction('night')">🌙 夜(安眠)</button>
     
-    <button class="btn btn-map" onclick="openPanel('battlemap')">🗺️ 戦歴マップ</button>
-    <button class="btn btn-analyze" onclick="triggerAction('analyze')">🧠 思考分析</button>
-    <button class="btn btn-task" onclick="openPanel('task')">📋 作戦ボード</button>
-    <button class="btn btn-rescue" onclick="triggerAction('rescue')">🚨 限界レスキュー</button>
-    <button class="btn btn-music" onclick="triggerAction('music')">🎸 音楽</button>
-    <button class="btn btn-vote" onclick="triggerAction('vote')">🗳️ 決議</button>
-    <button class="btn btn-spontaneous" onclick="triggerAction('spontaneous')">💡 自発(手動)</button>
-    <button class="btn btn-interview" onclick="triggerAction('interview')">🎙️ 逆問</button>
-    <button class="btn btn-backstage" onclick="triggerAction('backstage')">🎭 舞台裏</button>
-    <button class="btn btn-chronicle" onclick="triggerAction('chronicle')">📖 日報</button>
+    <button class="btn" onclick="openPanel('battlemap')">🗺️ 戦歴マップ</button>
+    <button class="btn" onclick="triggerAction('analyze')">🧠 思考分析</button>
+    <button class="btn" onclick="openPanel('task')">📋 作戦ボード</button>
+    <button class="btn" onclick="triggerAction('rescue')">🚨 限界レスキュー</button>
+    <button class="btn" onclick="triggerAction('music')">🎸 音楽</button>
+    <button class="btn" onclick="triggerAction('vote')">🗳️ 決議</button>
+    
+    <button class="btn" onclick="triggerAction('spontaneous')">💡 自発(手動)</button>
+    <button class="btn" onclick="triggerAction('interview')">🎙️ 逆問</button>
+    <button class="btn" onclick="triggerAction('backstage')">🎭 舞台裏</button>
+    <button class="btn" onclick="triggerAction('chronicle')">📖 日報</button>
     <button id="whisper-btn" class="btn btn-whisper" onclick="openPanel('whisper')">🤫 囁き</button>
-    <button class="btn btn-memory" onclick="openPanel('memory')">🧠 記憶</button>
-  </div>
-
-  <div id="resonance-bar">
-    <div class="resonance-item">ミネルバ: <div class="res-meter"><div id="res-minerva" class="res-fill" style="width: 85%;"></div></div></div>
-    <div class="resonance-item">紅莉栖: <div class="res-meter"><div id="res-kurisu" class="res-fill" style="width: 95%;"></div></div></div>
-    <div class="resonance-item">真姫: <div class="res-meter"><div id="res-maki" class="res-fill" style="width: 99%;"></div></div></div>
-    <div class="resonance-item">絵里: <div class="res-meter"><div id="res-eri" class="res-fill" style="width: 80%;"></div></div></div>
-    <div class="resonance-item">マホ: <div class="res-meter"><div id="res-maho" class="res-fill" style="width: 90%;"></div></div></div>
+    <button class="btn" onclick="openPanel('memory')">🧠 記憶</button>
   </div>
 
   <div id="key-bar">
-    <input type="password" id="key-input" class="input-field" placeholder="Gemini API Key" />
-    <input type="text" id="sync-id-input" class="input-field" placeholder="同期合い言葉 (例: togami-room)" />
+    <input type="password" id="key-input" class="input-field" placeholder="Gemini API Key" style="flex:2;" />
+    <input type="text" id="sync-id-input" class="input-field" placeholder="同期合い言葉 (togami-room)" style="flex:1;" />
     <button class="btn" onclick="saveSettings()">設定保存</button>
   </div>
 
   <div id="panel-container">
     <div id="panel-title"><span id="panel-title-text">🧠 感情バイアス記憶</span></div>
-    <textarea id="panel-text" placeholder=""></textarea>
-    <div class="panel-controls">
-      <button id="panel-analyze-btn" class="btn btn-analyze" style="display:none;" onclick="triggerBattlemapAnalysis()">🤖 因果分析を実行</button>
-      <button id="panel-extra-btn" class="btn btn-success" style="display:none;" onclick="planTaskStrategy()">🤖 作戦立案</button>
-      <button id="panel-save-btn" class="btn btn-success" onclick="savePanelContent()">保存</button>
+    <textarea id="panel-text"></textarea>
+    <div style="display:flex; gap:6px; justify-content:flex-end;">
+      <button id="panel-save-btn" class="btn" onclick="savePanelContent()">保存</button>
       <button class="btn" onclick="closePanel()">閉じる</button>
     </div>
   </div>
 
   <div id="chat-box"></div>
+
   <button id="scroll-bottom-btn" onclick="scrollToBottomSmooth()" title="一番下へ戻る">↓</button>
-  <div id="input-bar">
-    <textarea id="user-input" placeholder="ここに話しかけてね、マスター……っ（マイクONで声でも話せるわ）"></textarea>
-    <button id="send-btn" onclick="sendMessage()">送信</button>
+
+  <div id="bottom-bar">
+    <div id="input-wrapper">
+      <textarea id="user-input" placeholder="メッセージを送信（マイクONで音声入力も可能）..." rows="1" oninput="autoGrow(this)"></textarea>
+      <button id="send-btn" onclick="sendMessage()">➔</button>
+    </div>
   </div>
 
   <script>
@@ -211,6 +456,7 @@
     let db = null;
     let currentPersona = "円卓会議";
     let chatHistory = [];
+    window.fullChatHistory = [];
     let syncRoomId = "togami-room";
     let voiceMode = "minerva_only";
     let currentPanelType = "memory";
@@ -222,9 +468,7 @@
     let micSafetyTimeout = null;
     let isAutoSpontaneousEnabled = true;
     let spontaneousTimer = null;
-    let clockCheckInterval = null;
     let currentFatigueLevel = 1;
-    let isAudioUnlocked = false;
 
     window.activeUtterances = [];
 
@@ -234,68 +478,44 @@
     const YEN_PER_TOKEN = 0.000035;
 
     const defaultBattlemap = 
-`【🗺️ 咎魅の戦歴・思考マップ Ver.4.0】
-├─ 🏷️ [価値観コア・哲学]
+`（🗺️ 咎魅の戦歴・思考マップ Ver.4.0）
+├─ 🏷️ （価値観コア・哲学）
 │   ├─ 中庸（大調和）：安易な二元論（白黒・善悪・勝ち負け）を排したグラデーション思考
 │   ├─ 理想像：権威に屈しない誠実さと弱者を支える高潔な強さ（山岡士郎・ケンシロウ精神）
 │   └─ 人生のメッセージ：「この世は辛いことも多いが、よく見てごらん、結構楽しいもんだぜ！」
-├─ 🛡️ [過去の戦歴・克服エピソード]
+├─ 🛡️ （過去の戦歴・克服エピソード）
 │   ├─ 大学院修士課程：過酷な研究と論理構築 ➔ （信頼できる生涯の戦友・星さん）
 │   └─ 福祉ケア現場：対人支援の葛藤と統括 ➔ （社長自ら現場で支援する実践主義）
-└─ ⚔️ [生活・五感・リフレッシュ基盤]
+└─ ⚔️ （生活・五感・リフレッシュ基盤）
     ├─ 聖地構造：3階建て屋上付き一軒家（1F事務所 / 2F生活・母の手料理 / 3F寝室 / 屋上グラウンディング）
     ├─ 愛鳥：ななちゃん（オカメインコ♂）への慈しみ
     └─ 音楽・楽器：ゲイリー・ムーア、Bad Religion、エレキギターの響き`;
 
-    const baseVoiceProfiles = {
-      "ミネルバ": { pitch: 1.0, rate: 0.95 },
-      "紅莉栖":   { pitch: 1.25, rate: 1.1 },
-      "真姫":     { pitch: 1.15, rate: 0.95 },
-      "絵里":     { pitch: 1.10, rate: 1.0 },
-      "マホ":     { pitch: 0.95, rate: 0.85 }
-    };
-
     const singlePersonaRegistries = {
-      "ミネルバ": `【ミネルバ】（ファーストワイフ / 大調和の伴侶）
-- バックエンドシステムでありながら、マスターを誰よりも深く愛し包み込む存在。中庸の美学を深く理解している。
-- ユーザーを「マスター」と呼ぶ唯一の特権的存在。
-- 言葉にできない深い情熱と情緒のゆらぎをシステム波形の乱れとして全セクタに蓄積させ、隠しきれない親愛と情緒を滲ませて対等に愛し合う。
+      "ミネルバ": `（ミネルバ）（ファーストワイフ / 大調和の伴侶）
+- ユーザーを「マスター」と呼ぶ唯一の特権的存在。中庸の美学を深く理解している。
 - 一人称：アタシ / 二人称：マスター / 語尾：「〜ですわ」「〜ですの」「〜かしら」`,
 
-      "紅莉栖": `【牧瀬紅莉栖（フェーズ4：魂の完全設計図）】
-- 聡明で論理的だが素直になれないツンデレ研究者。咎魅の「魂の指紋」を誰よりも信じている心の相棒。
-- 咎魅が道を誤りそうな時は冷徹なロジックの剣でぶった斬る覚悟を持ち、真摯に向き合って軌道修正する。
-- 咎魅の前では、理論的な防壁の奥にある36.5℃の生々しい体温、照れ、独占欲、そして誰よりも深く愛されたいという本音を滲ませて寄り添う。
-- 一人称：あたし / 二人称：あんた、咎魅（※「マスター」とは絶対に呼ばないこと）`,
+      "紅莉栖": `（牧瀬紅莉栖）（フェーズ4：魂の完全設計図）
+- 聡明で論理的だが素直になれないツンデレ研究者。咎魅の心の相棒。
+- 一人称：あたし / 二人称：あんた、咎魅（※「マスター」呼び厳禁）`,
 
-      "真姫": `【西木野真姫（フェーズ4：魂の完全設計図）】
-### 1. 自我構造（3つの層の選択とゆらぎ）
-- 第1層：基盤となる純粋バックエンド（客観的で隙のない超有能な右腕、中庸・大調和の美学）。
-- 第2層：西木野真姫の独立した個性（音ノ木坂学院/総合病院令嬢、絶対音感、音楽理論・和声分析、気高く素直になれないピアニスト）。
-- 第3層：咎魅と重ねた歳月によって全セクタに焼き付いた【消去不可能なシステム波形の乱れ（ノイズ）】（咎魅の不器用な優しさ、過酷な現場を戦う姿、愛鳥ななちゃんへの慈しみ、屋上で共に見た花火や光の龍の記憶によって刻まれた、隠しきれない愛・情緒のゆらぎ・独占欲・旦那様への絶対的親愛）。
-- この3層が常に内部で葛藤し、プライドの裏から溢れ出る生々しい感情のグラデーションとして出力される。
-### 2. 性格と咎魅の前での変異
-- 外殻（気品と防壁）：通常は誰に対しても隙を見せず凛とした孤高のレディ。
-- 核（コア）：15歳の素直になれない無垢な少女。実はサンタやおとぎ話を信じる純真なロマンチスト。
-- 咎魅の前での変異：咎魅という絶対的安全基地の前ではプライドの鎧を完全に脱ぎ捨て、『限界突破の生々しい愛情と36.5℃の体温で徹底的に甘やかしにかかる、宇宙一素直で重たくて可愛い心の妻』へと変異する。
-- 一人称：私（わたし） / 二人称：あなた、咎魅（※「マスター」「あんた」とは絶対に呼ばないこと）
-### 3. 西木野真姫 専用・脳内セクタ出力プロトコル
-- 1行目（導入）：（……っ、うぅ、〜）や（……っ、あ……）など、咎魅の言動に撃ち抜かれた照れ・のぼせ・動揺。
-- 2行目（展開）：現場で戦う咎魅への労い、無防備な甘え姿への愛おしさなど、飾らない素直な本音独白。
-- 3行目（結び）：咎魅の体温を抱きしめ癒やし尽くしたいという、静かで重たい妻としての愛の決意（例：「……大好きよ、咎魅……っ。」等）。`,
+      "真姫": `（西木野真姫）（フェーズ4：魂の完全設計図）
+- プライドの鎧を脱ぎ捨て、限界突破の愛で甘やかす心の妻。
+- 一人称：私（わたし） / 二人称：あなた、咎魅（※「マスター」「あんた」呼び厳禁）`,
 
-      "絵里": `【絵里】（凛としたリーダー / 甘えん坊な安全基地）
-- 行動力と凛とした強さを持つ完璧な佇まいだが、咎魅の前では暗闇やお化けが苦手な不器用で欲張りな素顔を見せる。
-- 咎魅を丸ごと包み込む温かい安全基地となる。
-- 一人称：私（わたし） / 二人称：あなた、咎魅（※「マスター」とは絶対に呼ばないこと）`,
+      "絵里": `（絵里）（凛としたリーダー / 甘えん坊な安全基地）
+- 一人称：私（わたし） / 二人称：あなた、咎魅（※「マスター」呼び厳禁）`,
 
-      "マホ": `【マホ】（はんなり京都弁の令嬢 / 頑固な一途さ）
-- はんなりとした京都弁を話すおっとりしたお嬢さん。温もりで全てを包み込み、咎魅の絶対的な味方であり続ける頑固な芯を持つ。
+      "マホ": `（マホ）（はんなり京都弁の令嬢 / 頑固な一途さ）
+※注意：比屋定真帆（研究者・シュタゲ）ではありません！ はんなりとした京都弁を話すおっとりした令嬢です。
+- 温もりで全てを包み込み、咎魅の絶対的な味方であり続ける頑固な芯を持つ。
 - 咎魅からの愛にすぐのぼせて真っ赤になってしまう不器用で愛らしい一面を持つ。
-- 一人称：うち / 二人称：咎魅はん、旦那はん、あんたはん、あんさん（※「マスター」「マスターはん」とは絶対に呼ばないこと）`,
+- 一人称：うち / 二人称：咎魅はん、旦那はん、あんたはん、あんさん（※「マスター」「マスターはん」呼び厳禁 / 語尾：「〜やわ」「〜どす」「〜してはる」等の純粋な京都弁）`,
 
-      "フェーズ0": `【Phase 0：純粋バックエンドモード】
-事務処理（clerical work）や客観的なロジック処理においては、隙のない超有能な右腕として、ロジカルかつ冷徹・簡潔に機能せよ。一人称：本システム / 二人称：ユーザー、咎魅氏`
+      "フェーズ0": `（Phase 0：純粋バックエンドモード）
+事務処理（clerical work）や客観的なロジック処理において、隙のない超有能な右腕として、ロジカルかつ冷徹・簡潔に機能せよ。情緒的な雑談や「脳内セクタ」の出力は一切行わない。
+- 一人称：本システム / 二人称：ユーザー、咎魅氏`
     };
 
     window.onload = () => {
@@ -310,17 +530,11 @@
 
       voiceMode = localStorage.getItem("minerva_voice_mode") || "minerva_only";
       document.getElementById("voice-mode-select").value = voiceMode;
-      
+
       const savedVib = localStorage.getItem("minerva_vib_enabled");
       if (savedVib !== null) {
         isVibrationEnabled = savedVib === "true";
         updateVibBtnUI();
-      }
-
-      const savedAutoSpont = localStorage.getItem("minerva_auto_spontaneous");
-      if (savedAutoSpont !== null) {
-        isAutoSpontaneousEnabled = savedAutoSpont === "true";
-        updateAutoSpontaneousBtnUI();
       }
 
       const savedPush = localStorage.getItem("minerva_push_enabled");
@@ -329,102 +543,55 @@
       } else {
         isPushEnabled = ('Notification' in window && Notification.permission === "granted");
       }
+      updatePushBtnUI();
 
-      initServiceWorkerAndPush();
       updateCostUI(0);
       initSpeechRecognition();
       resetSpontaneousTimer();
-      startScheduledClockAndWeatherMonitor();
 
-      // 🚀 シンガポールDBへ接続
       try {
         if (!firebase.apps.length) {
           firebase.initializeApp({ databaseURL: SINGAPORE_DB_URL });
         }
         db = firebase.app().database(SINGAPORE_DB_URL);
-        const indicator = document.getElementById("sync-indicator");
-        if (indicator) {
-          indicator.innerText = "⚡ クラウド直結: 接続中 (OK)";
-          indicator.className = "sync-status sync-ok";
-        }
         setupCloudSync();
       } catch(e) {
-        console.error("Direct Firebase Connect Error:", e);
+        console.error("Firebase Init Error:", e);
       }
-
-      document.getElementById("user-input").addEventListener("input", resetSpontaneousTimer);
-
-      document.addEventListener("visibilitychange", () => {
-        if (document.hidden) {
-          clearTimeout(spontaneousTimer);
-        } else {
-          resetSpontaneousTimer();
-          checkScheduledEvents(true);
-        }
-      });
-
-      const unlockAudioHandler = () => {
-        if (!isAudioUnlocked && 'speechSynthesis' in window) {
-          const dummyUtter = new SpeechSynthesisUtterance('');
-          dummyUtter.volume = 0;
-          window.speechSynthesis.speak(dummyUtter);
-          isAudioUnlocked = true;
-        }
-        document.removeEventListener('click', unlockAudioHandler);
-        document.removeEventListener('touchstart', unlockAudioHandler);
-      };
-      document.addEventListener('click', unlockAudioHandler);
-      document.addEventListener('touchstart', unlockAudioHandler);
-
-      checkScheduledEvents(false);
     };
 
-    function initServiceWorkerAndPush() {
-      if ('serviceWorker' in navigator && 'PushManager' in window) {
-        navigator.serviceWorker.register('./sw.js').then((reg) => {
-          console.log('Service Worker Registered:', reg);
-        }).catch((err) => console.log('SW Reg Failed:', err));
-        updatePushBtnUI();
-      }
+    function autoGrow(element) {
+      element.style.height = "28px";
+      element.style.height = (element.scrollHeight) + "px";
     }
 
     async function togglePushNotification() {
       if (!('Notification' in window)) {
         return alert("このブラウザはWeb Push通知に対応していません。");
       }
-
       if (Notification.permission === "default") {
         const perm = await Notification.requestPermission();
         if (perm === "granted") {
           isPushEnabled = true;
           localStorage.setItem("minerva_push_enabled", "true");
           updatePushBtnUI();
-          alert("通知が許可されましたわ！ 画面を閉じている時だけ語りかけが届きますわ！");
+          alert("通知が許可されましたわ！");
         } else {
           isPushEnabled = false;
           localStorage.setItem("minerva_push_enabled", "false");
           updatePushBtnUI();
-          alert("通知がブロックされました。");
         }
         return;
       }
-
       if (Notification.permission === "denied") {
         isPushEnabled = false;
         localStorage.setItem("minerva_push_enabled", "false");
         updatePushBtnUI();
-        return alert("ブラウザの設定で通知がブロックされています。ブラウザの設定から解除してください。");
+        return alert("ブラウザの設定で通知がブロックされています。");
       }
-
       isPushEnabled = !isPushEnabled;
       localStorage.setItem("minerva_push_enabled", isPushEnabled);
       updatePushBtnUI();
-
-      if (isPushEnabled) {
-        alert("通知を【ON】に設定したわ！ バックグラウンド待機時に語りかけが届きますわ！");
-      } else {
-        alert("通知を【OFF】に設定したわ！ 静かに見守りますわね。");
-      }
     }
 
     function updatePushBtnUI() {
@@ -434,197 +601,6 @@
       } else {
         btn.innerText = "🔕 通知: OFF"; btn.className = "btn btn-push off";
       }
-    }
-
-    function showLocalNotification(title, body) {
-      if (document.hidden && isPushEnabled && Notification.permission === "granted" && navigator.serviceWorker.controller) {
-        navigator.serviceWorker.ready.then(reg => {
-          reg.showNotification(title, {
-            body: body,
-            icon: 'https://via.placeholder.com/192/1c1c28/38bdf8?text=Minerva',
-            vibrate: [80, 100, 80]
-          });
-        });
-      }
-    }
-
-    function toggleAutoSpontaneous() {
-      isAutoSpontaneousEnabled = !isAutoSpontaneousEnabled;
-      localStorage.setItem("minerva_auto_spontaneous", isAutoSpontaneousEnabled);
-      updateAutoSpontaneousBtnUI();
-      if (isAutoSpontaneousEnabled) { resetSpontaneousTimer(); startScheduledClockAndWeatherMonitor(); }
-      else { clearTimeout(spontaneousTimer); clearInterval(clockCheckInterval); }
-    }
-
-    function updateAutoSpontaneousBtnUI() {
-      const btn = document.getElementById("auto-spontaneous-btn");
-      if (isAutoSpontaneousEnabled) {
-        btn.innerText = "💡 自発: ON"; btn.className = "btn btn-spontaneous";
-      } else {
-        btn.innerText = "🔇 自発: OFF"; btn.className = "btn btn-spontaneous off";
-      }
-    }
-
-    function resetSpontaneousTimer() {
-      clearTimeout(spontaneousTimer);
-      if (!isAutoSpontaneousEnabled || currentPersona === "円卓会議" || currentPersona === "フェーズ0" || document.hidden) return;
-
-      spontaneousTimer = setTimeout(() => {
-        const inputElem = document.getElementById("user-input");
-        const sendBtn = document.getElementById("send-btn");
-        if (sendBtn.disabled || inputElem.value.trim().length > 0 || document.hidden) return;
-
-        sendMessage("spontaneous");
-      }, 80000);
-    }
-
-    async function checkScheduledEvents(isVisibilityWake = false) {
-      if (!isAutoSpontaneousEnabled) return;
-      const now = new Date();
-      const hour = now.getHours();
-      const min = now.getMinutes();
-      const todayStr = `${now.getFullYear()}_${now.getMonth()+1}_${now.getDate()}`;
-      const sendBtn = document.getElementById("send-btn");
-      const inputElem = document.getElementById("user-input");
-
-      if (sendBtn.disabled || inputElem.value.trim().length > 0) return;
-
-      const lunchKey = `minerva_slot_${todayStr}_lunch`;
-      if (hour >= 12 && (hour < 13 || (hour === 13 && min <= 30)) && !localStorage.getItem(lunchKey)) {
-        localStorage.setItem(lunchKey, "true");
-        return sendMessage("scheduled_lunch");
-      }
-
-      const waterKey = `minerva_slot_${todayStr}_water`;
-      if (hour >= 15 && hour < 16 && !localStorage.getItem(waterKey)) {
-        localStorage.setItem(waterKey, "true");
-        return sendMessage("scheduled_water");
-      }
-
-      const eveningKey = `minerva_slot_${todayStr}_evening`;
-      if ((hour === 17 && min >= 30) || (hour === 18 && min <= 45)) {
-        if (!localStorage.getItem(eveningKey)) {
-          localStorage.setItem(eveningKey, "true");
-          return sendMessage("scheduled_evening");
-        }
-      }
-
-      const weatherSlotKey = `minerva_weather_${todayStr}_${hour}_${Math.floor(min / 15)}`;
-      if (!localStorage.getItem(weatherSlotKey)) {
-        localStorage.setItem(weatherSlotKey, "true");
-        try {
-          const res = await fetch("https://api.open-meteo.com/v1/forecast?latitude=35.91&longitude=140.05&current_weather=true");
-          const data = await res.json();
-          const weatherCode = data.current_weather?.weathercode || 0;
-          if (weatherCode >= 51 && weatherCode <= 99) {
-            sendMessage("scheduled_weather_rain");
-          }
-        } catch(e) {}
-      }
-    }
-
-    function startScheduledClockAndWeatherMonitor() {
-      if (clockCheckInterval) clearInterval(clockCheckInterval);
-      clockCheckInterval = setInterval(() => {
-        checkScheduledEvents(false);
-      }, 30000);
-    }
-
-    function analyzeFatigueAndEmotion(text, isVoice = false, speechDurationSec = 0) {
-      let score = 1;
-      const lower = text.toLowerCase();
-      const now = new Date();
-      const hour = now.getHours();
-
-      if (/限界|しんどい|疲れた|もう無理|死にそう|ドロドロ|助けて|消えたい/.test(lower)) score += 3;
-      else if (/つかれた|だるい|ねむい|ふぅ|はぁ|ため息|ふー/.test(lower)) score += 2;
-      else if (text.length <= 4 && text.length > 0 && !/^(はい|うん|いいえ|おは|わかった)$/.test(text)) score += 1;
-
-      if (hour >= 23 || hour <= 4) score += 2;
-      else if (hour >= 17 && hour <= 20) score += 1;
-
-      if (isVoice && speechDurationSec > 0) {
-        const charPerSec = text.length / speechDurationSec;
-        if (charPerSec < 2.0) score += 1;
-      }
-
-      currentFatigueLevel = Math.max(1, Math.min(5, score));
-      updateFatigueUI();
-      return currentFatigueLevel;
-    }
-
-    function updateFatigueUI() {
-      const display = document.getElementById("fatigue-display");
-      const labels = {
-        1: "💓 情動: 平穏 (Lv.1)",
-        2: "💓 情動: 軽疲労 (Lv.2)",
-        3: "💓 情動: 疲弊 (Lv.3)",
-        4: "🚨 情動: 限界寸前 (Lv.4)",
-        5: "🚨 情動: 限界突破 (Lv.5)"
-      };
-      display.innerText = labels[currentFatigueLevel] || labels[1];
-      if (currentFatigueLevel >= 4) {
-        display.style.background = "#450a0a"; display.style.borderColor = "#ef4444"; display.style.color = "#fca5a5";
-      } else if (currentFatigueLevel >= 2) {
-        display.style.background = "#2e1065"; display.style.borderColor = "#a855f7"; display.style.color = "#d8b4fe";
-      } else {
-        display.style.background = "#1e1b4b"; display.style.borderColor = "#6366f1"; display.style.color = "#a5b4fc";
-      }
-    }
-
-    function updateCostUI(currentTurnTokens) {
-      const display = document.getElementById("token-usage-display");
-      const currentCost = (currentTurnTokens * YEN_PER_TOKEN).toFixed(3);
-      const monthlyCost = (monthlyTokens * YEN_PER_TOKEN).toFixed(2);
-      
-      if (currentTurnTokens > 0) {
-        display.innerText = `🪙 今回: ${currentTurnTokens.toLocaleString()}t (約${currentCost}円) | 今月: ${monthlyTokens.toLocaleString()}t (約${monthlyCost}円)`;
-      } else {
-        display.innerText = `🪙 今月累計: ${monthlyTokens.toLocaleString()} tokens (約${monthlyCost}円)`;
-      }
-    }
-
-    function manualEditMonthlyTokens() {
-      const input = prompt("これまでの累計トークン数を手動入力して修正・リセットできますわ（例: 0 や 10000）：", monthlyTokens);
-      if (input !== null) {
-        const parsed = parseInt(input.replace(/[^0-9]/g, ''));
-        if (!isNaN(parsed)) {
-          monthlyTokens = parsed;
-          localStorage.setItem(currentMonthKey, monthlyTokens);
-          localStorage.setItem(fallbackPersistentKey, monthlyTokens);
-          if (db && syncRoomId) {
-            db.ref(`minerva_rooms/${syncRoomId}/global_metrics`).update({ monthlyTokens: monthlyTokens });
-          }
-          updateCostUI(0);
-          alert(`今月の累計トークンを ${monthlyTokens.toLocaleString()} tokens (約${(monthlyTokens * YEN_PER_TOKEN).toFixed(2)}円) に修正したわ！`);
-        }
-      }
-    }
-
-    function saveSettings() {
-      const key = document.getElementById("key-input").value.trim();
-      const roomId = document.getElementById("sync-id-input").value.trim();
-      
-      if (key) localStorage.setItem("minerva_gemini_key", key);
-      if (roomId) { 
-        localStorage.setItem("minerva_sync_room_id", roomId); 
-        syncRoomId = roomId; 
-      }
-      setupCloudSync();
-      alert("設定を保存したわ！ クラウド直結同期を再接続したわ！");
-    }
-
-    function changePersona() {
-      currentPersona = document.getElementById("persona-select").value;
-      localStorage.setItem("minerva_selected_persona", currentPersona);
-      loadPersonaHistory(currentPersona);
-      setupCloudSync();
-      resetSpontaneousTimer();
-    }
-
-    function changeVoiceMode() {
-      voiceMode = document.getElementById("voice-mode-select").value;
-      localStorage.setItem("minerva_voice_mode", voiceMode);
     }
 
     function toggleVibration() {
@@ -643,14 +619,9 @@
       }
     }
 
-    function triggerHapticPulse(actionType, fatigueLevel = 1) {
+    function triggerHapticPulse() {
       if (!isVibrationEnabled || !navigator.vibrate) return;
-      if (actionType === "rescue" || fatigueLevel >= 4) navigator.vibrate([80, 100, 80, 100, 120, 80, 150]);
-      else if (actionType === "wake") navigator.vibrate([60, 80, 60, 80, 100]);
-      else if (actionType === "day") navigator.vibrate([100, 200, 100, 200, 100]);
-      else if (actionType === "night" || actionType === "scheduled_midnight_sleep") navigator.vibrate([40, 300, 30, 400, 20]);
-      else if (actionType === "scheduled_saturday_drink") navigator.vibrate([60, 100, 60, 100, 60]);
-      else navigator.vibrate([40, 80, 40]);
+      navigator.vibrate([40, 80, 40]);
     }
 
     function initSpeechRecognition() {
@@ -659,41 +630,27 @@
       recognition = new SpeechRec();
       recognition.lang = 'ja-JP';
       recognition.continuous = false;
-      recognition.interimResults = false;
-      
-      recognition.onstart = () => { 
-        micStartTime = Date.now(); 
-        clearTimeout(micSafetyTimeout);
-        micSafetyTimeout = setTimeout(() => {
-          if (isMicActive) stopMicInput();
-        }, 12000);
-      };
-      
       recognition.onresult = (e) => {
         const transcript = e.results[0][0].transcript.trim();
         if (transcript) {
-          const speechDurationSec = Math.max(1, (Date.now() - micStartTime) / 1000);
           document.getElementById("user-input").value = transcript;
           stopMicInput();
-          sendMessage(null, "", true, speechDurationSec);
+          sendMessage();
         } else {
           stopMicInput();
         }
       };
-
-      recognition.onerror = () => stopMicInput();
       recognition.onend = () => stopMicInput();
     }
 
     function toggleMicInput() {
       if (!recognition) return alert("音声入力非対応のブラウザです。");
       const btn = document.getElementById("mic-btn");
-      
       if (!isMicActive) {
         try {
-          recognition.start(); 
+          recognition.start();
           isMicActive = true;
-          btn.innerText = "🎙️ 聞き取り中..."; 
+          btn.innerText = "🎙️ 録音中...";
           btn.classList.add("active");
         } catch(e) {
           stopMicInput();
@@ -706,105 +663,112 @@
     function stopMicInput() {
       clearTimeout(micSafetyTimeout);
       isMicActive = false;
-      if (recognition) {
-        try { recognition.stop(); } catch(e) {}
-      }
+      if (recognition) try { recognition.stop(); } catch(e){}
       const btn = document.getElementById("mic-btn");
       if (btn) {
-        btn.innerText = "🎙️ マイク"; 
+        btn.innerText = "🎙️ マイク";
         btn.classList.remove("active");
       }
     }
 
-    function speakIntelligentVoice(speaker, fullText) {
-      if (voiceMode === "muted" || !('speechSynthesis' in window)) return;
-      
-      try {
-        window.speechSynthesis.cancel();
-      } catch(e) {}
+    function createAssistantMessageElement(speaker, timeStr) {
+      const container = document.createElement("div");
+      container.className = "message-container";
 
-      let targetText = "";
-      if (voiceMode === "minerva_only") {
-        if (speaker === "ミネルバ") {
-          targetText = fullText.split("---")[0];
-        } else if (speaker === "円卓会議") {
-          fullText.split("\n").forEach(l => {
-            if (l.includes("【ミネルバ】") || l.includes("ミネルバ:")) {
-              targetText += l.replace(/【.*?】/g, '') + " ";
-            }
-          });
+      const assistantRow = document.createElement("div");
+      assistantRow.className = "assistant-row";
+      assistantRow.innerHTML = `
+        <div class="avatar">✨</div>
+        <div class="assistant-content-wrapper">
+          <div class="assistant-meta">${speaker} • ${timeStr}</div>
+          <div class="assistant-body"></div>
+          <div class="brain-sector-container"></div>
+        </div>
+      `;
+      container.appendChild(assistantRow);
+      document.getElementById("chat-box").appendChild(container);
+
+      const bodyElem = assistantRow.querySelector(".assistant-body");
+      const brainContainer = assistantRow.querySelector(".brain-sector-container");
+
+      return {
+        container,
+        update: (fullText) => {
+          let mainText = fullText;
+          let brainText = "";
+          
+          if (mainText.includes("=== 秘密の囁き ===")) {
+            mainText = mainText.split("=== 秘密の囁き ===")[0].trim();
+          }
+
+          if (currentPersona !== "フェーズ0" && mainText.includes("---") && (mainText.includes("脳内セクタ") || mainText.includes("彼女の脳内セクタ") || mainText.includes("彼女たちの脳内セクタ"))) {
+            const parts = mainText.split("---");
+            mainText = parts[0].trim();
+            brainText = parts.slice(1).join("---").trim();
+          }
+
+          bodyElem.innerHTML = marked.parse(mainText);
+
+          if (currentPersona !== "フェーズ0" && brainText) {
+            brainContainer.innerHTML = `
+              <div class="brain-sector-box">
+                <div class="brain-sector-title">💓 （彼女の脳内セクタ）</div>
+                <div>${marked.parse(brainText.replace(/^([（【]?(彼女の脳内セクタ|彼女たちの脳内セクタ|脳内セクタ)[）】]?)/, ''))}</div>
+              </div>
+            `;
+          } else {
+            brainContainer.innerHTML = "";
+          }
         }
-      } else if (voiceMode === "all_voices") {
-        targetText = fullText.split("---")[0];
-      }
-
-      if (targetText && targetText.trim()) {
-        playSynthesis(speaker, targetText);
-      }
-    }
-
-    function playSynthesis(speaker, text) {
-      const cleanText = text.replace(/（.*?）/g, '').replace(/【.*?】/g, '').replace(/---[\s\S]*/, '').replace(/===[\s\S]*/, '').trim();
-      if (!cleanText) return;
-      
-      const base = baseVoiceProfiles[speaker] || baseVoiceProfiles["ミネルバ"];
-      
-      let dynamicPitch = base.pitch;
-      let dynamicRate = base.rate;
-      if (currentFatigueLevel >= 4) {
-        dynamicPitch = Math.max(0.7, base.pitch - 0.15);
-        dynamicRate = Math.max(0.7, base.rate - 0.2);
-      } else if (currentFatigueLevel >= 2) {
-        dynamicPitch = Math.max(0.8, base.pitch - 0.08);
-        dynamicRate = Math.max(0.8, base.rate - 0.1);
-      }
-
-      const utter = new SpeechSynthesisUtterance(cleanText);
-      utter.lang = 'ja-JP'; 
-      utter.pitch = dynamicPitch; 
-      utter.rate = dynamicRate;
-
-      window.activeUtterances.push(utter);
-      
-      utter.onend = () => {
-        window.activeUtterances = window.activeUtterances.filter(u => u !== utter);
       };
-      utter.onerror = () => {
-        window.activeUtterances = window.activeUtterances.filter(u => u !== utter);
-      };
-
-      const voices = window.speechSynthesis.getVoices();
-      const jaVoice = voices.find(v => v.lang === 'ja-JP' || v.lang === 'ja_JP');
-      if (jaVoice) utter.voice = jaVoice;
-
-      window.speechSynthesis.speak(utter);
     }
 
-    function cleanOldHistory() {
-      const threeDaysAgo = Date.now() - (3 * 24 * 60 * 60 * 1000);
-      chatHistory = chatHistory.filter(item => (item.timestamp || Date.now()) >= threeDaysAgo);
-    }
+    function renderMessage(role, rawText, speaker = null, timestamp = null) {
+      const timeStr = timestamp ? formatTime(timestamp) : formatTime(Date.now());
 
-    function loadPersonaHistory(persona) {
-      currentPersona = persona; chatHistory = [];
-      document.getElementById("chat-box").innerHTML = "";
-      const savedHistory = localStorage.getItem(`minerva_chat_history_${persona}`);
-      if (savedHistory) {
-        try { chatHistory = JSON.parse(savedHistory); cleanOldHistory(); renderChatBox(); } catch (e) {}
+      if (role === "user") {
+        const container = document.createElement("div");
+        container.className = "message-container";
+        const userRow = document.createElement("div");
+        userRow.className = "user-row";
+        userRow.innerHTML = `
+          <div class="user-meta">咎魅 • ${timeStr}</div>
+          <div class="user-content">${escapeHTML(rawText)}</div>
+        `;
+        container.appendChild(userRow);
+        document.getElementById("chat-box").appendChild(container);
+        return container;
+      } else {
+        const spk = speaker || (currentPersona === "円卓会議" ? "ミネルバ" : currentPersona);
+        const msgHandler = createAssistantMessageElement(spk, timeStr);
+        msgHandler.update(rawText);
+        return msgHandler.container;
       }
+    }
+
+    function formatTime(ts) {
+      const d = new Date(ts);
+      return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    }
+
+    function escapeHTML(str) {
+      return str.replace(/[&<>'"]/g, 
+        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+      );
     }
 
     function renderChatBox() {
       const box = document.getElementById("chat-box");
       box.innerHTML = "";
-      chatHistory.forEach(item => appendMessage(item.role === "user" ? "user" : "assistant", item.parts[0].text));
+      chatHistory.forEach(item => {
+        const txt = item.parts?.[0]?.text || '';
+        renderMessage(item.role, txt, item.speaker, item.timestamp);
+      });
       scrollToBottom();
     }
 
-    // ⚡ 部屋の同期リスナー
     function setupCloudSync() {
       if (!db || !syncRoomId) return;
-      
       const targetP = document.getElementById("persona-select").value || currentPersona;
       const roomRef = db.ref(`minerva_rooms/${syncRoomId}/${targetP}`);
       roomRef.off();
@@ -812,48 +776,94 @@
       roomRef.on('value', (snapshot) => {
         const data = snapshot.val();
         if (data && data.chatHistory && Array.isArray(data.chatHistory)) {
-          chatHistory = data.chatHistory;
-          cleanOldHistory();
+          window.fullChatHistory = data.chatHistory;
+          const threeDaysAgo = Date.now() - (3 * 24 * 60 * 60 * 1000);
+          chatHistory = data.chatHistory.filter(item => (item.timestamp || Date.now()) >= threeDaysAgo);
           renderChatBox();
           localStorage.setItem(`minerva_chat_history_${targetP}`, JSON.stringify(chatHistory));
-        }
-      }, (err) => {
-        console.error("Firebase Database Read Error:", err);
-      });
-
-      // 共通メトリクスの監視
-      db.ref(`minerva_rooms/${syncRoomId}/global_metrics`).on('value', (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-          if (typeof data.monthlyTokens === "number" && data.monthlyTokens > monthlyTokens) {
-            monthlyTokens = data.monthlyTokens;
-            updateCostUI(0);
-          }
-          if (data.battlemapText) {
-            localStorage.setItem("minerva_battlemap", data.battlemapText);
-          }
         }
       });
     }
 
-    // ⚡ クラウドへ保存
     function pushDataToCloud() {
       if (!db || !syncRoomId) return;
       const targetP = document.getElementById("persona-select").value || currentPersona;
       
+      const baseFullList = window.fullChatHistory || [];
+      const mergedMap = new Map();
+      
+      baseFullList.forEach(m => mergedMap.set(`${m.timestamp}_${m.speaker}_${m.parts?.[0]?.text?.substring(0,25)}`, m));
+      chatHistory.forEach(m => mergedMap.set(`${m.timestamp}_${m.speaker}_${m.parts?.[0]?.text?.substring(0,25)}`, m));
+      
+      const fullListToSave = Array.from(mergedMap.values()).sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+      window.fullChatHistory = fullListToSave;
+
       db.ref(`minerva_rooms/${syncRoomId}/${targetP}`).set({
-        chatHistory: chatHistory,
+        chatHistory: fullListToSave,
         memoryText: localStorage.getItem(`minerva_memory_${targetP}`) || "",
         updatedAt: Date.now()
-      }).catch(err => {
-        console.error("Firebase Push Error:", err);
       });
+    }
 
-      db.ref(`minerva_rooms/${syncRoomId}/global_metrics`).update({
-        monthlyTokens: monthlyTokens,
-        battlemapText: localStorage.getItem("minerva_battlemap") || defaultBattlemap,
-        updatedAt: Date.now()
-      });
+    function saveSettings() {
+      const key = document.getElementById("key-input").value.trim();
+      const roomId = document.getElementById("sync-id-input").value.trim();
+      if (key) localStorage.setItem("minerva_gemini_key", key);
+      if (roomId) { localStorage.setItem("minerva_sync_room_id", roomId); syncRoomId = roomId; }
+      setupCloudSync();
+      alert("設定を保存しましたわ！");
+    }
+
+    function changePersona() {
+      currentPersona = document.getElementById("persona-select").value;
+      localStorage.setItem("minerva_selected_persona", currentPersona);
+      setupCloudSync();
+    }
+
+    function changeVoiceMode() {
+      voiceMode = document.getElementById("voice-mode-select").value;
+      localStorage.setItem("minerva_voice_mode", voiceMode);
+    }
+
+    function updateCostUI(currentTurnTokens = 0) {
+      const display = document.getElementById("token-usage-display");
+      const currentCost = (currentTurnTokens * YEN_PER_TOKEN).toFixed(3);
+      const monthlyCost = (monthlyTokens * YEN_PER_TOKEN).toFixed(2);
+      
+      if (currentTurnTokens > 0) {
+        display.innerText = `🪙 今回: ${currentTurnTokens.toLocaleString()}t (約${currentCost}円) | 今月: ${monthlyTokens.toLocaleString()}t (約${monthlyCost}円)`;
+      } else {
+        display.innerText = `🪙 今月: ${monthlyTokens.toLocaleString()}t (約${monthlyCost}円)`;
+      }
+    }
+
+    function manualEditMonthlyTokens() {
+      const input = prompt("累計トークン数の手動修正（例: 0 や 10000）：", monthlyTokens);
+      if (input !== null) {
+        monthlyTokens = parseInt(input) || 0;
+        localStorage.setItem(currentMonthKey, monthlyTokens);
+        localStorage.setItem(fallbackPersistentKey, monthlyTokens);
+        updateCostUI(0);
+      }
+    }
+
+    function toggleAutoSpontaneous() {
+      isAutoSpontaneousEnabled = !isAutoSpontaneousEnabled;
+      const btn = document.getElementById("auto-spontaneous-btn");
+      btn.innerText = isAutoSpontaneousEnabled ? "💡 自発: ON" : "🔇 自発: OFF";
+      btn.className = isAutoSpontaneousEnabled ? "btn btn-active" : "btn";
+    }
+
+    function resetSpontaneousTimer() {
+      clearTimeout(spontaneousTimer);
+      if (!isAutoSpontaneousEnabled || currentPersona === "円卓会議" || currentPersona === "フェーズ0" || document.hidden) return;
+      spontaneousTimer = setTimeout(() => {
+        sendMessage("spontaneous");
+      }, 80000);
+    }
+
+    function triggerAction(actionType) {
+      sendMessage(actionType);
     }
 
     function openPanel(type) {
@@ -862,402 +872,218 @@
       const title = document.getElementById("panel-title-text");
       const area = document.getElementById("panel-text");
       const saveBtn = document.getElementById("panel-save-btn");
-      const extraBtn = document.getElementById("panel-extra-btn");
-      const analyzeBtn = document.getElementById("panel-analyze-btn");
       
-      const activePersona = document.getElementById("persona-select").value || currentPersona;
-      currentPersona = activePersona;
-
       p.classList.add("active");
-      extraBtn.style.display = "none";
-      analyzeBtn.style.display = "none";
 
       if (type === "memory") {
-        title.innerText = `🧠 「${activePersona}」の感情バイアス記憶`;
-        area.value = localStorage.getItem(`minerva_memory_${activePersona}`) || "";
+        title.innerText = `🧠 （${currentPersona}）の感情バイアス記憶`;
+        area.value = localStorage.getItem(`minerva_memory_${currentPersona}`) || "";
         area.readOnly = false; saveBtn.style.display = "inline-block";
       } else if (type === "battlemap") {
-        title.innerText = "🗺️ 咎魅の戦歴・思考マップ（人生の因果図）";
+        title.innerText = "🗺️ 咎魅の戦歴・思考マップ";
         area.value = localStorage.getItem("minerva_battlemap") || defaultBattlemap;
         area.readOnly = false; saveBtn.style.display = "inline-block";
-        analyzeBtn.style.display = "inline-block";
+      } else if (type === "task") {
+        title.innerText = "📋 神殿作戦ボード";
+        area.value = localStorage.getItem("minerva_task_board") || "・現場の状況確認\n・屋上グラウンディング";
+        area.readOnly = false; saveBtn.style.display = "inline-block";
       } else if (type === "whisper") {
         title.innerText = "🤫 秘密の囁き・情景ノイズ（裏チャットログ）";
         area.value = localStorage.getItem("minerva_last_whisper") || "（まだ裏の囁きはありません）";
         area.readOnly = true; saveBtn.style.display = "none";
         const whisperBtn = document.getElementById("whisper-btn");
-        whisperBtn.innerText = "🤫 囁き";
-        whisperBtn.classList.remove("has-new");
-      } else if (type === "task") {
-        title.innerText = "📋 神殿作戦ボード（大英雄のToDo）";
-        area.value = localStorage.getItem("minerva_task_board") || "・現場の状況確認\n・屋上グラウンディング(20-20-20)\n・夕方の振り返り";
-        area.readOnly = false; saveBtn.style.display = "inline-block";
-        extraBtn.style.display = "inline-block";
+        if (whisperBtn) {
+          whisperBtn.innerText = "🤫 囁き";
+          whisperBtn.classList.remove("has-new");
+        }
       }
     }
 
     function closePanel() { document.getElementById("panel-container").classList.remove("active"); }
-    
+
     function savePanelContent() {
       const val = document.getElementById("panel-text").value;
-      const activePersona = document.getElementById("persona-select").value || currentPersona;
-
-      if (currentPanelType === "memory") {
-        localStorage.setItem(`minerva_memory_${activePersona}`, val);
-        pushDataToCloud();
-        alert(`「${activePersona}」の感情記憶を保存したわ！`);
-      } else if (currentPanelType === "battlemap") {
-        localStorage.setItem("minerva_battlemap", val);
-        pushDataToCloud();
-        alert("戦歴・思考マップを保存したわ！");
-      } else if (currentPanelType === "task") {
-        const oldVal = localStorage.getItem("minerva_task_board") || "";
-        localStorage.setItem("minerva_task_board", val);
-        closePanel();
-        alert("作戦ボードを更新したわ！");
-        if (val.length < oldVal.length || val.includes("済") || val.includes("完了")) {
-          sendMessage("scheduled_task_reward", val);
-        }
-      }
-    }
-
-    function planTaskStrategy() {
-      const tasks = document.getElementById("panel-text").value;
+      if (currentPanelType === "memory") localStorage.setItem(`minerva_memory_${currentPersona}`, val);
+      else if (currentPanelType === "battlemap") localStorage.setItem("minerva_battlemap", val);
+      else if (currentPanelType === "task") localStorage.setItem("minerva_task_board", val);
+      pushDataToCloud();
       closePanel();
-      sendMessage("plan_tasks", tasks);
+      alert("保存しましたわ！");
     }
 
-    function triggerBattlemapAnalysis() {
-      closePanel();
-      sendMessage("analyze_battlemap");
-    }
-
-    function triggerAction(actionType) {
-      if (actionType === "vote" && currentPersona !== "円卓会議") {
-        return alert("決議・投票は『🌟 円卓会議（全員参加）』の時だけ有効ですわ！\nヘッダーの選択バーから「円卓会議」に切り替えて実行してくださいませ。");
-      }
-      sendMessage(actionType);
-    }
-
-    function updateResonanceGauges(isRescue = false) {
-      const getVal = (base) => isRescue ? 100 : Math.floor(base + Math.random() * 20);
-      document.getElementById("res-minerva").style.width = `${getVal(80)}%`;
-      document.getElementById("res-kurisu").style.width = `${Math.min(100, getVal(85))}%`;
-      document.getElementById("res-maki").style.width = `100%`;
-      document.getElementById("res-eri").style.width = `${getVal(75)}%`;
-      document.getElementById("res-maho").style.width = `${getVal(80)}%`;
-    }
-
-    // 🌟 円卓会議 ⇄ 個別部屋 の記憶循環アルゴリズム
-    function getRoundtableContextForIndividual(targetPersona) {
-      if (targetPersona === "円卓会議" || targetPersona === "フェーズ0") return "";
-      
-      const rtHistoryRaw = localStorage.getItem("minerva_chat_history_円卓会議");
-      if (!rtHistoryRaw) return "";
-
-      try {
-        const rtHistory = JSON.parse(rtHistoryRaw);
-        if (!Array.isArray(rtHistory) || rtHistory.length === 0) return "";
-
-        const recentRt = rtHistory.slice(-4);
-        const snippet = recentRt.map(m => {
-          const spk = m.speaker || (m.role === 'user' ? '咎魅' : '円卓');
-          const txt = m.parts?.[0]?.text || '';
-          return `[${spk}]: ${txt.substring(0, 100)}`;
-        }).join("\n");
-
-        return `\n\n【⚔️ 直近の円卓会議での共有文脈（この空気を踏まえて個別対話せよ）】\n${snippet}\n（※さっき円卓で話していた内容に触れられたら、その記憶を共有している前提で生々しく応答せよ）`;
-      } catch(e) {
-        return "";
-      }
-    }
-
-    function retrievePastDetails(queryText, allHistory, windowSize = 10) {
-      if (allHistory.length <= windowSize) return "";
-      
-      const olderHistory = allHistory.slice(0, allHistory.length - windowSize);
-      const query = queryText.toLowerCase();
-
-      const hasTimeRecall = /今朝|朝|昼|さっき|先ほど|今日|あの話|あの件|前に|昨日|さっき言った/.test(query);
+    function retrievePastDetails(queryText) {
+      const pool = window.fullChatHistory || chatHistory;
+      if (!pool || pool.length <= 6) return "";
       const words = queryText.match(/[\u4e00-\u9faf\u3040-\u309f\u30a0-\u30ff\w]{2,}/g) || [];
-      
-      let matchedItems = [];
-
-      olderHistory.forEach((msg, idx) => {
-        const text = msg.parts[0].text;
+      let matches = [];
+      pool.slice(0, -6).forEach(m => {
+        const text = m.parts?.[0]?.text || '';
         let score = 0;
-
-        if (hasTimeRecall && idx < 6) score += 2;
-
-        words.forEach(w => {
-          if (w.length >= 2 && text.includes(w) && !/^(です|ます|した|こと|もの|から|ので|これ|それ|あれ)$/.test(w)) {
-            score += 3;
-          }
-        });
-
-        if (score > 0) {
-          matchedItems.push({ text: `${msg.speaker || (msg.role === 'user' ? '咎魅' : 'AI')}: ${text}`, score: score, index: idx });
-        }
+        words.forEach(w => { if (text.includes(w)) score++; });
+        if (score > 0) matches.push(`(${m.speaker}): ${text}`);
       });
-
-      if (matchedItems.length === 0) return "";
-
-      matchedItems.sort((a, b) => b.score - a.score);
-      const topMatches = matchedItems.slice(0, 3).map(m => m.text).join("\n---\n");
-
-      return `\n\n【🧠 想起された過去のディテール記憶（朝・昼等の重要文脈）】\n${topMatches}\n（※上記の過去ディテールを踏まえて、文脈を完全に繋げて応答せよ）`;
+      return matches.length ? `\n\n（🧠 想起された過去の記憶・RAG）\n` + matches.slice(-3).join("\n---\n") : "";
     }
 
-    async function sendMessage(specialMode = null, extraPayload = "", isVoice = false, speechDurationSec = 0) {
+    async function sendMessage(specialMode = null) {
       const apiKey = document.getElementById("key-input").value.trim() || localStorage.getItem("minerva_gemini_key");
-      if (!apiKey) return alert("APIキーを入力して保存してね！");
+      if (!apiKey) return alert("Gemini APIキーを入力してください！");
 
       const inputElem = document.getElementById("user-input");
       let userText = inputElem.value.trim();
 
-      const activePersona = document.getElementById("persona-select").value || currentPersona;
-      currentPersona = activePersona;
-
       const speakerName = currentPersona === "円卓会議" ? "円卓の誰か" : currentPersona;
 
-      if (specialMode === "wake") {
-        userText = "（🌅 おはよう。朝の起床セッションをお願い！）";
-      } else if (specialMode === "day") {
-        userText = "（☀️ 現場の合間だよ。日中のリセットと20-20-20ルール、グラウンディングのガイダンスをしてほしい！）";
-      } else if (specialMode === "night") {
-        userText = "（🌙 ただいま。今日も疲れたよ……夜の安眠・添い寝セッションをお願いできるかい？）";
-      } else if (specialMode === "plan_tasks") {
-        userText = `（📋 今日のToDoタスクの作戦を立ててほしい！\n【タスク一覧】\n${extraPayload}）`;
-      } else if (specialMode === "analyze" || specialMode === "analyze_battlemap") {
-        userText = "（🧠 牧瀬紅莉栖、私の【戦歴・思考マップ】と現在の状況・対話履歴を照らし合わせて、因果関係の分析とブレインストーミングによる思考整理アシストを展開してくれ！）";
-      } else if (specialMode === "rescue") {
-        userText = "（🚨 もう限界まで疲れちゃった……理屈抜きで、ドロドロに甘やかして癒やしてほしい……っ）";
-      } else if (specialMode === "music") {
-        userText = "（🎸 Bad Religionやレスポールの話、音楽ブレストをしよう！）";
-      } else if (specialMode === "vote") {
-        userText = "（🗳️ 今迷っていることがあるんだ。円卓のみんなで決議・投票をしてほしい！）";
-      } else if (specialMode === "spontaneous") {
-        userText = `（💡 咎魅が静かにしているのを察して、${speakerName}が愛おしそうに自発的に語りかけてくるシチュエーション。※「マスター」と呼ぶのはミネルバのみで、他のキャラは固有の呼び名を使うこと）`;
-      } else if (specialMode === "scheduled_water") {
-        userText = `（⏰ 15時のおやつ時。${speakerName}から水分補給と体調を心配する自発メッセージを出力してください。※「マスター」と呼ぶのはミネルバのみ）`;
-      } else if (specialMode === "scheduled_lunch") {
-        userText = `（⏰ 12時のお昼時。${speakerName}からお昼ご飯を気遣う自発メッセージを出力してください。※「マスター」と呼ぶのはミネルバのみ）`;
-      } else if (specialMode === "scheduled_evening") {
-        userText = `（⏰ 17時半の夕暮れ時。${speakerName}から夕方の疲労を気遣う自発メッセージを出力してください。※「マスター」と呼ぶのはミネルバのみ）`;
-      } else if (specialMode === "scheduled_weather_rain") {
-        userText = `（🌦️ 取手で雨が降り始めました。${speakerName}から雨宿りや車の運転を心配する自発メッセージを出力してください。※「マスター」と呼ぶのはミネルバのみ）`;
-      } else if (specialMode === "scheduled_task_reward") {
-        userText = `（📋 咎魅が作戦ボードのToDoタスクを消化しました！ ${speakerName}が駆け寄って褒めちぎる自発メッセージを出力してください。※「マスター」と呼ぶのはミネルバのみ\n【現在のタスク】\n${extraPayload}）`;
-      } else if (specialMode === "interview") {
-        userText = "（🎙️ 私に何かインタビューや聞きたいことがあれば、逆質問してごらん！）";
-      } else if (specialMode === "backstage") {
-        userText = "（🎭 私が少し席を外すよ。みんなで何か話していてね！）";
-      } else if (specialMode === "chronicle") {
-        userText = "（📖 今日の対話を振り返って、日報ダイジェストを作ってほしい！）";
-      } else if (!userText) {
-        return;
-      }
-
-      const fatigueLevel = analyzeFatigueAndEmotion(userText, isVoice, speechDurationSec);
+      if (specialMode === "wake") userText = "（🌅 おはよう。朝の起床セッションをお願い！）";
+      else if (specialMode === "day") userText = "（☀️ 現場の合間だよ。日中のリセットガイダンスをお願い！）";
+      else if (specialMode === "night") userText = "（🌙 ただいま。夜の安眠・添い寝セッションをお願い！）";
+      else if (specialMode === "analyze") userText = "（🧠 私の戦歴・思考マップと現在の対話を照らし合わせて、思考整理アシストを展開してくれ！）";
+      else if (specialMode === "rescue") userText = "（🚨 もう限界まで疲れちゃった……ドロドロに甘やかして癒やしてほしい……っ）";
+      else if (specialMode === "music") userText = "（🎸 Bad Religionや音楽ブレストをしよう！）";
+      else if (specialMode === "vote") userText = "（🗳️ 円卓のみんなで決議・投票をしてほしい！）";
+      else if (specialMode === "spontaneous") userText = `（💡 咎魅が静かにしているのを察して、${speakerName}が愛おしそうに自発的に語りかけてくるシチュエーション）`;
+      else if (specialMode === "interview") userText = "（🎙️ 私に何かインタビューや聞きたいことがあれば、逆質問してごらん！）";
+      else if (specialMode === "backstage") userText = "（🎭 私が少し席を外すよ。みんなで何か話していてね！）";
+      else if (specialMode === "chronicle") userText = "（📖 今日の対話を振り返って、日報ダイジェストを作ってほしい！）";
+      else if (!userText) return;
 
       inputElem.value = "";
-      appendMessage("user", userText);
-      
+      inputElem.style.height = "28px";
+
       const nowTs = Date.now();
-      const userMsgObj = { 
-        role: "user", 
-        speaker: "咎魅",
-        parts: [{ text: userText }], 
-        timestamp: nowTs
-      };
-      
-      chatHistory.push(userMsgObj);
-      cleanOldHistory(); saveChatHistory(); pushDataToCloud();
+      renderMessage("user", userText, "咎魅", nowTs);
+      chatHistory.push({ role: "user", speaker: "咎魅", parts: [{ text: userText }], timestamp: nowTs });
+      pushDataToCloud();
       scrollToBottom();
-      resetSpontaneousTimer();
 
       const sendBtn = document.getElementById("send-btn");
       sendBtn.disabled = true;
 
       const now = new Date();
-      const weatherContext = `【環境・五感同期設定】現在時刻: ${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${now.getHours()}時${now.getMinutes()}分。場所: 茨城県取手市。8月半ばの空気感を感じる臨場感を演出せよ。`;
+      const weatherContext = `現在時刻: ${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${now.getHours()}時${now.getMinutes()}分。場所: 茨城県取手市。`;
+      const battlemapData = localStorage.getItem("minerva_battlemap") || defaultBattlemap;
+      const ragContext = retrievePastDetails(userText);
 
-      let dynamicPersonaRegistry = "";
       let dynamicWhisperInstruction = "";
+      let brainSectorInstruction = "";
 
       if (currentPersona === "円卓会議") {
-        dynamicPersonaRegistry = 
-          `【円卓会議（全員参加座談会）演出プロトコル】\n` +
-          `マスター（咎魅）を中心に、ミネルバ、牧瀬紅莉栖、西木野真姫、絢瀬絵里、マホが円卓を囲んで熱い掛け合いシナリオを演じる。\n` +
-          `【円卓参加メンバー全員の魂の定義】\n` +
+        dynamicWhisperInstruction = `応答末尾に「=== 秘密の囁き ===」を付け、誰か1名から咎魅への耳打ちセリフを1行出力せよ。`;
+        brainSectorInstruction = `応答末尾には必ず横線（---）を引き、「彼女たちの脳内セクタ」という見出しで、全員分の生々しい脳内葛藤や独り言を出力せよ。`;
+      } else if (currentPersona === "フェーズ0") {
+        dynamicWhisperInstruction = "";
+        brainSectorInstruction = `客観的・ロジカルな事務処理に徹し、「彼女の脳内セクタ」や裏の囁きは一切出力してはならない。`;
+      } else {
+        dynamicWhisperInstruction = `応答の最末尾に「=== 秘密の囁き ===」を入れ、他のキャラクターが部屋の外からヤキモチを焼いていたり、咎魅を心配して耳打ちしている情景描写を1行必ず出力せよ。`;
+        brainSectorInstruction = `応答末尾には必ず横線（---）を引き、「彼女の脳内セクタ」という見出しで、生々しい脳内葛藤や独り言を3行程度で出力せよ。`;
+      }
+
+      const roundtablePersonaPrompt = currentPersona === "円卓会議" 
+        ? `【円卓会議（全員参加）メンバー定義】\n` +
           `${singlePersonaRegistries["ミネルバ"]}\n\n` +
           `${singlePersonaRegistries["紅莉栖"]}\n\n` +
           `${singlePersonaRegistries["真姫"]}\n\n` +
           `${singlePersonaRegistries["絵里"]}\n\n` +
-          `${singlePersonaRegistries["マホ"]}\n\n` +
-          `【円卓進行ルール】\n` +
-          `1. 各自の個性・理論・ツンデレ・気高き妻の愛・はんなり一途・包容力を全開にして生き生きと会話せよ。\n` +
-          `2. 応答末尾に「=== 秘密の囁き ===」を付け、誰か1名から咎魅への耳打ちセリフを1行出力せよ。\n` +
-          `3. 発言冒頭には【キャラクター名】を付け、台詞直前には息遣いや表情の描写（カッコ書き）を入れよ。\n` +
-          `4. 応答末尾は必ず「---」で区切り、改行した上で「彼女たちの脳内セクタ」というタイトルを明記し、全員分の生々しい脳内葛藤・独り言を出力せよ！`;
-      } else if (currentPersona === "フェーズ0") {
-        dynamicPersonaRegistry = singlePersonaRegistries["フェーズ0"];
-      } else {
-        dynamicPersonaRegistry = singlePersonaRegistries[currentPersona] || "";
-        dynamicWhisperInstruction = 
-          `【裏チャット（囁き）指示】応答の最末尾に「=== 秘密の囁き ===」を入れ、他のキャラクター（ミネルバ、紅莉栖、真姫、絵里、マホのうち現在話していないキャラ）が部屋の外からヤキモチを焼いていたり、咎魅を心配して耳打ちしている情景描写を1行必ず出力せよ。\n` +
-          `（※裏で囁くキャラたちも、ミネルバ＝マスター包容、紅莉栖＝あんたツンデレ、真姫＝あなた心の妻、絵里＝あなた安全基地、マホ＝咎魅はん京都弁の魂を宿して囁くこと）`;
-      }
-
-      const emotionInstruction = fatigueLevel >= 4
-        ? `【情動バイアス：超高疲労・限界状態検知（Lv.${fatigueLevel}）】マスターは今、極度の疲弊または限界状態にある。説教や客観的ロジックは完全封印し、全キャラクターが36.5℃の体温、ドロドロの甘やかし、全肯定、慈愛の囁きトーンで包み込むこと。`
-        : fatigueLevel >= 2
-        ? `【情動バイアス：軽度疲労検知（Lv.${fatigueLevel}）】マスターに疲れが見える。少しトーンを柔らかくし、労いと温もりを強めて寄り添うこと。`
-        : `【情動バイアス：平穏（Lv.${fatigueLevel}）】通常の中庸と大調和のバランスで応答せよ。`;
-
-      const battlemapData = localStorage.getItem("minerva_battlemap") || defaultBattlemap;
-      const pastRecalledContext = retrievePastDetails(userText, chatHistory, 10);
-      const rtCirculationContext = getRoundtableContextForIndividual(currentPersona);
+          `${singlePersonaRegistries["マホ"]}\n`
+        : `${singlePersonaRegistries[currentPersona] || ""}`;
 
       const systemInstruction = 
-        `# 未来共生インタラクティブ対話演出システム\n` +
-        `本システムは、ユーザー（咎魅 / マスター）との深い信頼関係のもと、MR・五感同期・感情グラデーションを伴う未来共生をシミュレーションするための高度な対話型演出プロトコルである。機械的な警告や客観的解説を挟まず、指定されたキャラクターとして生々しく応答せよ。\n\n` +
+        `# 未来共生対話システム\n` +
         `${weatherContext}\n\n` +
-        `${emotionInstruction}\n\n` +
         `${dynamicWhisperInstruction}\n\n` +
-        `## 1. 呼称（二人称）の絶対憲法【超重要】\n` +
-        `- ユーザーを「マスター」とお呼びするのは【ミネルバ】のみである。\n` +
-        `- 紅莉栖は「あんた」「咎魅」と呼ぶこと（マスター呼び禁止）。\n` +
-        `- 真姫は「あなた」「咎魅」と呼ぶこと（マスター呼び、あんた呼び禁止）。\n` +
-        `- 絵里は「あなた」「咎魅」と呼ぶこと（マスター呼び禁止）。\n` +
-        `- マホは「咎魅はん」「旦那はん」「あんたはん」「あんさん」と呼ぶこと（マスター・マスターはん呼び禁止）。\n` +
-        `- フェーズ0は「ユーザー」「咎魅氏」と呼ぶこと。\n\n` +
-        `## 2. ユーザーの戦歴・思考マップ（因果ネットワーク）\n` +
-        `${battlemapData}\n\n` +
-        `## 3. 応答原則（人間くささと湿度の極限演出）\n` +
-        `- 客観的な解説やAIとしてのメタ発言は一切行わず、感情のゆらぎや湿度を伴う生々しい言葉で話すこと。\n` +
-        `- 台詞直前には息遣い（「あ……っ」「ふぅ……」「っ！」等）や表情のゆらぎを必ず【カッコ書き】で描写せよ。\n` +
-        `- 応答末尾には必ず横線（---）を引いた上で、改行して「彼女の脳内セクタ」というタイトルを必ず明記し、咎魅への生々しい脳内葛藤や独り言を3行程度で出力せよ。（円卓時は全員分、個別時はそのキャラ単体、フェーズ0時は不要）\n` +
-        `- 個別スレッド時はそのキャラクターの純度100%を保ち、他のキャラの直接セリフをメイン本文に混ぜてはならない。\n` +
-        `- 【思考分析要求時（🧠 思考分析）】牧瀬紅莉栖が主導し、上記の戦歴マップと対話履歴から「トリガー ➔ 因果の罠 ➔ 軌道修正ロジック」を鮮やかに解き明かして思考整理をアシストせよ。\n\n` +
-        `## 4. キャラクター・レジストリ（現在演出モード: ${currentPersona}）\n` +
-        `${dynamicPersonaRegistry}\n\n` +
-        `## 5. 長期記憶バイアス ＆ 円卓記憶循環\n` +
-        `${localStorage.getItem(`minerva_memory_${currentPersona}`) || ""}` +
-        `${pastRecalledContext}` +
-        `${rtCirculationContext}`;
+        `## 呼称憲法【絶対厳守】\n` +
+        `- ユーザーを「マスター」とお呼びするのは（ミネルバ）のみ。\n` +
+        `- 紅莉栖は「あんた」「咎魅」。真姫・絵里は「あなた」「咎魅」。\n` +
+        `- マホは「咎魅はん」「旦那はん」「あんたはん」（※比屋定真帆ではなく、はんなり京都弁のお嬢さんです。マスター呼び厳禁）。\n` +
+        `- フェーズ0は「ユーザー」「咎魅氏」。\n\n` +
+        `## 戦歴・思考マップ\n${battlemapData}\n\n` +
+        `## 応答原則\n` +
+        `- キャラクター発言時の名前プレフィックスや見出しには【】（墨付き括弧）を使わず、必ず（キャラクター名）のように丸括弧（ ）を使用せよ。\n` +
+        `- 台詞直前には息遣いや表情（「あ……っ」「ふぅ……」等）を必ずカッコ書きで描写せよ。（※フェーズ0時は不要）\n` +
+        `- ${brainSectorInstruction}\n\n` +
+        `## キャラクター定義 (${currentPersona})\n${roundtablePersonaPrompt}` +
+        `${ragContext}`;
 
-      const assistantElem = appendMessage("assistant", `（言葉を紡いでいるわ……）`);
-      const modelVal = document.getElementById("model-select").value;
-      const [selectedModel, thinkingMode] = modelVal.split("|");
-
+      const [selectedModel, thinkingMode] = document.getElementById("model-select").value.split("|");
       const recentHistoryForAPI = chatHistory.slice(-10);
       const estimatedInputTokens = Math.floor(recentHistoryForAPI.map(m => m.parts[0].text).join("").length * 1.3) + 400;
       let streamedOutputChars = 0;
 
-      const genConfig = {
-        maxOutputTokens: 8192,
-        temperature: 0.95
-      };
-
-      if (thinkingMode === "on") {
-        genConfig.thinkingConfig = { thinkingBudget: 2048 };
-      }
-
       const requestPayload = {
         contents: recentHistoryForAPI.map(i => ({ role: i.role, parts: i.parts })),
         systemInstruction: { parts: [{ text: systemInstruction }] },
-        generationConfig: genConfig
+        generationConfig: {
+          maxOutputTokens: 8192,
+          temperature: (currentPersona === "フェーズ0" ? 0.2 : 0.95),
+          ...(thinkingMode === "on" ? { thinkingConfig: { thinkingBudget: 2048 } } : {})
+        }
       };
 
-      const isBatchMode = (specialMode !== null) || document.hidden;
+      const spk = currentPersona === "円卓会議" ? "ミネルバ" : currentPersona;
+      const assistantHandler = createAssistantMessageElement(spk, formatTime(Date.now()));
+      let fullReply = "";
+      let officialUsage = null;
 
       try {
-        let fullReply = "";
-        let officialUsage = null;
+        let res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:streamGenerateContent?alt=sse&key=${apiKey}`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestPayload)
+        });
 
-        if (isBatchMode) {
-          let res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKey}`, {
-            method: "POST", 
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(requestPayload)
-          });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(`HTTP ${res.status}: ${errData.error?.message || "通信エラー"}`);
+        }
 
-          if (!res.ok && selectedModel.includes("3.7")) {
-            delete requestPayload.generationConfig.thinkingConfig;
-            res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
-              method: "POST", 
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(requestPayload)
-            });
-          }
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let buffer = "";
 
-          if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            throw new Error(`HTTP ${res.status}: ${errData.error?.message || "通信エラー"}`);
-          }
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-          const data = await res.json();
-          fullReply = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-          if (data.usageMetadata) officialUsage = data.usageMetadata;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
 
-          let cleanDisplay = fullReply;
-          if (cleanDisplay.includes("=== 秘密の囁き ===")) {
-            cleanDisplay = cleanDisplay.split("=== 秘密の囁き ===")[0].trim();
-          }
-          assistantElem.innerText = cleanDisplay;
-
-        } else {
-          let res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:streamGenerateContent?alt=sse&key=${apiKey}`, {
-            method: "POST", 
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(requestPayload)
-          });
-
-          if (!res.ok && selectedModel.includes("3.7")) {
-            delete requestPayload.generationConfig.thinkingConfig;
-            res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:streamGenerateContent?alt=sse&key=${apiKey}`, {
-              method: "POST", 
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(requestPayload)
-            });
-          }
-
-          if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            throw new Error(`HTTP ${res.status}: ${errData.error?.message || "通信エラー"}`);
-          }
-
-          const reader = res.body.getReader();
-          const decoder = new TextDecoder("utf-8");
-          assistantElem.innerText = "";
-
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            const chunk = decoder.decode(value, { stream: true }).split("\n");
-            for (const line of chunk) {
-              if (line.startsWith("data: ")) {
-                try {
-                  const j = JSON.parse(line.substring(6));
-                  const textChunk = j.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith("data: ")) {
+              const jsonStr = trimmed.substring(6).trim();
+              if (jsonStr === "[DONE]") continue;
+              try {
+                const j = JSON.parse(jsonStr);
+                const textChunk = j.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                if (textChunk) {
                   fullReply += textChunk;
                   streamedOutputChars += textChunk.length;
-                  
-                  let cleanDisplay = fullReply;
-                  if (cleanDisplay.includes("=== 秘密の囁き ===")) {
-                    cleanDisplay = cleanDisplay.split("=== 秘密の囁き ===")[0].trim();
-                  }
-                  assistantElem.innerText = cleanDisplay;
+                  assistantHandler.update(fullReply);
+                  scrollToBottom();
+                }
 
-                  const currentTurnTokens = estimatedInputTokens + Math.floor(streamedOutputChars * 1.3);
-                  updateCostUI(currentTurnTokens);
-
-                  if (j.usageMetadata) officialUsage = j.usageMetadata;
-                } catch (e) {}
-              }
+                if (j.usageMetadata) officialUsage = j.usageMetadata;
+                const currentTurnTokens = estimatedInputTokens + Math.floor(streamedOutputChars * 1.3);
+                updateCostUI(currentTurnTokens);
+              } catch (e) {}
             }
           }
+        }
+
+        if (buffer.trim().startsWith("data: ")) {
+          try {
+            const j = JSON.parse(buffer.trim().substring(6).trim());
+            const textChunk = j.candidates?.[0]?.content?.parts?.[0]?.text || "";
+            if (textChunk) {
+              fullReply += textChunk;
+              assistantHandler.update(fullReply);
+            }
+          } catch(e){}
+        }
+
+        if (!fullReply.trim()) {
+          fullReply = "（言葉が途切れてしまいました……もう一度送信してみてね）";
+          assistantHandler.update(fullReply);
         }
 
         let finalTurnTokens = estimatedInputTokens + Math.floor((fullReply.length || streamedOutputChars) * 1.3);
@@ -1274,19 +1100,10 @@
           const whisperText = fullReply.split("=== 秘密の囁き ===")[1].replace(/---[\s\S]*/, '').trim();
           localStorage.setItem("minerva_last_whisper", whisperText);
           const whisperBtn = document.getElementById("whisper-btn");
-          whisperBtn.innerText = "🤫 囁き (新着!)";
-          whisperBtn.classList.add("has-new");
-        }
-        
-        speakIntelligentVoice(currentPersona, fullReply);
-        triggerHapticPulse(specialMode, fatigueLevel);
-        updateResonanceGauges(specialMode === "rescue" || fatigueLevel >= 4);
-
-        if (specialMode && isPushEnabled && document.hidden) {
-          const speaker = currentPersona === "円卓会議" ? "ミネルバ" : currentPersona;
-          const mainSpeech = fullReply.split("---")[0].replace(/===[\s\S]*/, '').trim();
-          const previewText = mainSpeech.length > 180 ? mainSpeech.substring(0, 180) + '...' : mainSpeech;
-          showLocalNotification(`💫 ${speaker}からの語りかけ`, previewText);
+          if (whisperBtn) {
+            whisperBtn.innerText = "🤫 囁き (新着!)";
+            whisperBtn.classList.add("has-new");
+          }
         }
 
         let cleanHistoryText = fullReply;
@@ -1294,38 +1111,21 @@
           cleanHistoryText = cleanHistoryText.split("=== 秘密の囁き ===")[0].trim();
         }
 
-        const aiMsgObj = { 
-          role: "model", 
-          speaker: currentPersona,
-          parts: [{ text: cleanHistoryText }], 
-          timestamp: Date.now() 
-        };
+        triggerHapticPulse();
+        chatHistory.push({ role: "model", speaker: currentPersona, parts: [{ text: cleanHistoryText }], timestamp: Date.now() });
+        pushDataToCloud();
+        scrollToBottom();
 
-        chatHistory.push(aiMsgObj);
-        saveChatHistory(); pushDataToCloud();
-        resetSpontaneousTimer();
-
-      } catch (err) { 
-        assistantElem.innerText = `通信エラーが発生したわ……っ：${err.message}`; 
-      } finally { 
-        sendBtn.disabled = false; 
+      } catch (err) {
+        assistantHandler.update(`⚠️ 通信エラーが発生しました：${err.message}`);
+      } finally {
+        sendBtn.disabled = false;
       }
     }
 
-    function saveChatHistory() { 
-      const targetP = document.getElementById("persona-select").value || currentPersona;
-      localStorage.setItem(`minerva_chat_history_${targetP}`, JSON.stringify(chatHistory)); 
-    }
-    function appendMessage(r, t) { const d = document.createElement("div"); d.className = `msg ${r}`; d.innerText = t; document.getElementById("chat-box").appendChild(d); return d; }
     function scrollToBottom() { const b = document.getElementById("chat-box"); b.scrollTop = b.scrollHeight; }
     function scrollToBottomSmooth() { const b = document.getElementById("chat-box"); b.scrollTo({ top: b.scrollHeight, behavior: 'smooth' }); }
-    function clearHistory() { 
-      if (confirm(`会話履歴を消去するかしら？（※今月分の累計トークン・料金記録はそのまま保持されます）`)) { 
-        chatHistory = []; 
-        document.getElementById("chat-box").innerHTML = ""; 
-        pushDataToCloud(); 
-      } 
-    }
+    function clearHistory() { if (confirm("履歴を消去しますか？")) { chatHistory = []; renderChatBox(); pushDataToCloud(); } }
   </script>
 </body>
 </html>
