@@ -3,12 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ミネルバの神殿 - Direct Edition</title>
+  <title>ミネルバの神殿 - Direct Edition (Live Sync)</title>
   
-  <!-- Firebase SDK (Compat) -->
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+  <!-- エディタと同一のFirebase SDK (v10.12.0) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
   <style>
     * { box-sizing: border-box; }
@@ -24,8 +23,6 @@
     .fatigue-badge { font-size: 0.72rem; background: #221a2e; border: 1px solid #a855f7; color: #d8b4fe; padding: 2px 8px; border-radius: 12px; font-weight: bold; }
     .sync-status { font-size: 0.72rem; padding: 2px 6px; border-radius: 10px; font-weight: bold; }
     .sync-ok { background: #064e3b; color: #34d399; border: 1px solid #059669; }
-    .sync-wait { background: #451a03; color: #fbbf24; border: 1px solid #d97706; }
-    .sync-error { background: #450a0a; color: #fca5a5; border: 1px solid #ef4444; }
 
     .header-right { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 
@@ -115,8 +112,8 @@
   <header>
     <div class="header-left">
       <span>💫 Minerva Direct</span>
-      <span class="version-tag">ver.26.08.20.12.05</span>
-      <span id="sync-indicator" class="sync-status sync-wait" onclick="reAuthForce()" title="クリックして認証を再試行">☁️ 認証待機中...</span>
+      <span class="version-tag">ver.26.08.20.12.35</span>
+      <span id="sync-indicator" class="sync-status sync-ok">⚡ ライブ同期: 接続中 (OK)</span>
       <span id="token-usage-display" class="token-badge" onclick="manualEditMonthlyTokens()" title="クリックして今月の累計トークン数を手動修正・リセット">🪙 計算中...</span>
       <span id="fatigue-display" class="fatigue-badge">💓 情動: 平穏 (Lv.1)</span>
     </div>
@@ -209,19 +206,9 @@
   </div>
 
   <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyBckN3bKcCWOMqzLqEIqmuktKej_sF5ckk",
-      authDomain: "minerva-db-b3b4d.firebaseapp.com",
-      databaseURL: "https://minerva-db-b3b4d-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "minerva-db-b3b4d",
-      storageBucket: "minerva-db-b3b4d.firebasestorage.app",
-      messagingSenderId: "780637239141",
-      appId: "1:780637239141:web:8966fbf0fa0abdcc2a538c",
-      measurementId: "G-8XHWBJT8NM"
-    };
-
+    const SINGAPORE_DB_URL = "https://minerva-db-b3b4d-default-rtdb.asia-southeast1.firebasedatabase.app";
+    
     let db = null;
-    let auth = null;
     let currentPersona = "円卓会議";
     let chatHistory = [];
     let syncRoomId = "togami-room";
@@ -349,7 +336,21 @@
       resetSpontaneousTimer();
       startScheduledClockAndWeatherMonitor();
 
-      initDirectFirebase();
+      // 🚀 シンガポールDBへ接続＆同期開始
+      try {
+        if (!firebase.apps.length) {
+          firebase.initializeApp({ databaseURL: SINGAPORE_DB_URL });
+        }
+        db = firebase.app().database(SINGAPORE_DB_URL);
+        const indicator = document.getElementById("sync-indicator");
+        if (indicator) {
+          indicator.innerText = "⚡ ライブ同期: 接続中 (OK)";
+          indicator.className = "sync-status sync-ok";
+        }
+        setupCloudSync();
+      } catch(e) {
+        console.error("Direct Firebase Connect Error:", e);
+      }
 
       document.getElementById("user-input").addEventListener("input", resetSpontaneousTimer);
 
@@ -377,51 +378,6 @@
 
       checkScheduledEvents(false);
     };
-
-    function initDirectFirebase() {
-      try {
-        if (!firebase.apps.length) {
-          firebase.initializeApp(firebaseConfig);
-        }
-        
-        db = firebase.app().database("https://minerva-db-b3b4d-default-rtdb.asia-southeast1.firebasedatabase.app");
-        auth = firebase.auth();
-
-        const indicator = document.getElementById("sync-indicator");
-
-        auth.onAuthStateChanged((user) => {
-          if (user) {
-            console.log("🟢 認証確立:", user.uid);
-            if (indicator) {
-              indicator.innerText = "☁️ クラウド同期中 (OK)";
-              indicator.className = "sync-status sync-ok";
-            }
-            setupCloudSync();
-          } else {
-            auth.signInAnonymously().catch((err) => {
-              console.error("Firebase Auth Error:", err);
-              if (indicator) {
-                indicator.innerText = `⚠️ 認証エラー (${err.code || '失敗'})`;
-                indicator.className = "sync-status sync-error";
-              }
-              loadPersonaHistory(currentPersona);
-            });
-          }
-        });
-
-      } catch(e) {
-        console.error("Firebase Init Error:", e);
-      }
-    }
-
-    function reAuthForce() {
-      if (!auth) return;
-      auth.signOut().then(() => {
-        auth.signInAnonymously().then(() => {
-          alert("認証を再確立したわ！");
-        });
-      });
-    }
 
     function initServiceWorkerAndPush() {
       if ('serviceWorker' in navigator && 'PushManager' in window) {
@@ -655,7 +611,7 @@
         syncRoomId = roomId; 
       }
       setupCloudSync();
-      alert("設定を保存したわ！ クラウド同期を再接続したわ！");
+      alert("設定を保存したわ！ クラウド直結同期を再接続したわ！");
     }
 
     function changePersona() {
@@ -845,61 +801,65 @@
       scrollToBottom();
     }
 
+    // ⚡ エディタ（minerva_rooms/togami-room）の全更新を監視
     function setupCloudSync() {
       if (!db || !syncRoomId) return;
-      const targetP = document.getElementById("persona-select").value || currentPersona;
       
-      db.ref(`minerva_rooms/${syncRoomId}`).off();
+      const roomRef = db.ref(`minerva_rooms/${syncRoomId}`);
+      roomRef.off();
 
-      const roomRef = db.ref(`minerva_rooms/${syncRoomId}/${targetP}`);
       roomRef.on('value', (snapshot) => {
         const data = snapshot.val();
         if (data) {
-          if (data.chatHistory && Array.isArray(data.chatHistory)) {
+          const targetP = document.getElementById("persona-select").value || currentPersona;
+          
+          if (data[targetP] && data[targetP].chatHistory) {
+            chatHistory = data[targetP].chatHistory;
+          } else if (data.chatHistory && Array.isArray(data.chatHistory)) {
             chatHistory = data.chatHistory;
-            cleanOldHistory();
-            renderChatBox();
-            localStorage.setItem(`minerva_chat_history_${targetP}`, JSON.stringify(chatHistory));
           }
-          if (data.memoryText) {
-            localStorage.setItem(`minerva_memory_${targetP}`, data.memoryText);
+          
+          cleanOldHistory();
+          renderChatBox();
+          
+          if (data[targetP] && data[targetP].memoryText) {
+            localStorage.setItem(`minerva_memory_${targetP}`, data[targetP].memoryText);
+          }
+          if (data.global_metrics) {
+            if (data.global_metrics.monthlyTokens > monthlyTokens) {
+              monthlyTokens = data.global_metrics.monthlyTokens;
+              updateCostUI(0);
+            }
+            if (data.global_metrics.battlemapText) {
+              localStorage.setItem("minerva_battlemap", data.global_metrics.battlemapText);
+            }
           }
         }
       }, (err) => {
         console.error("Firebase Database Read Error:", err);
       });
-
-      const metricsRef = db.ref(`minerva_rooms/${syncRoomId}/global_metrics`);
-      metricsRef.on('value', (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-          if (typeof data.monthlyTokens === "number" && data.monthlyTokens > monthlyTokens) {
-            monthlyTokens = data.monthlyTokens;
-            localStorage.setItem(currentMonthKey, monthlyTokens);
-            localStorage.setItem(fallbackPersistentKey, monthlyTokens);
-            updateCostUI(0);
-          }
-          if (data.battlemapText) {
-            localStorage.setItem("minerva_battlemap", data.battlemapText);
-          }
-        }
-      });
     }
 
+    // ⚡ エディタ側へ一括同期書き込み
     function pushDataToCloud() {
       if (!db || !syncRoomId) return;
       const targetP = document.getElementById("persona-select").value || currentPersona;
-      db.ref(`minerva_rooms/${syncRoomId}/${targetP}`).update({
-        chatHistory: chatHistory,
-        memoryText: localStorage.getItem(`minerva_memory_${targetP}`) || "",
-        updatedAt: Date.now()
-      }).catch(err => {
+      
+      // エディタの「全体ログ」と「各キャラ部屋」の両方を同時に更新
+      const updates = {};
+      updates[`${targetP}/chatHistory`] = chatHistory;
+      updates[`${targetP}/memoryText`] = localStorage.getItem(`minerva_memory_${targetP}`) || "";
+      updates[`${targetP}/updatedAt`] = Date.now();
+      
+      // ルート直下のchatHistoryにも最新を反映
+      updates[`chatHistory`] = chatHistory;
+      updates[`updatedAt`] = Date.now();
+      
+      updates[`global_metrics/monthlyTokens`] = monthlyTokens;
+      updates[`global_metrics/battlemapText`] = localStorage.getItem("minerva_battlemap") || defaultBattlemap;
+
+      db.ref(`minerva_rooms/${syncRoomId}`).update(updates).catch(err => {
         console.error("Firebase Push Error:", err);
-      });
-      db.ref(`minerva_rooms/${syncRoomId}/global_metrics`).update({
-        monthlyTokens: monthlyTokens,
-        battlemapText: localStorage.getItem("minerva_battlemap") || defaultBattlemap,
-        updatedAt: Date.now()
       });
     }
 
