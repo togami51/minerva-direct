@@ -25,6 +25,7 @@
     .sync-status { font-size: 0.72rem; padding: 2px 6px; border-radius: 10px; font-weight: bold; }
     .sync-ok { background: #064e3b; color: #34d399; border: 1px solid #059669; }
     .sync-wait { background: #451a03; color: #fbbf24; border: 1px solid #d97706; }
+    .sync-error { background: #450a0a; color: #fca5a5; border: 1px solid #ef4444; }
 
     .header-right { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 
@@ -114,8 +115,8 @@
   <header>
     <div class="header-left">
       <span>💫 Minerva Direct</span>
-      <span class="version-tag">ver.26.08.20.11.35</span>
-      <span id="sync-indicator" class="sync-status sync-wait">☁️ 認証待機中...</span>
+      <span class="version-tag">ver.26.08.20.12.05</span>
+      <span id="sync-indicator" class="sync-status sync-wait" onclick="reAuthForce()" title="クリックして認証を再試行">☁️ 認証待機中...</span>
       <span id="token-usage-display" class="token-badge" onclick="manualEditMonthlyTokens()" title="クリックして今月の累計トークン数を手動修正・リセット">🪙 計算中...</span>
       <span id="fatigue-display" class="fatigue-badge">💓 情動: 平穏 (Lv.1)</span>
     </div>
@@ -208,7 +209,6 @@
   </div>
 
   <script>
-    // 🏛️ マスター専用 Firebase 完全組込構成
     const firebaseConfig = {
       apiKey: "AIzaSyBckN3bKcCWOMqzLqEIqmuktKej_sF5ckk",
       authDomain: "minerva-db-b3b4d.firebaseapp.com",
@@ -349,7 +349,6 @@
       resetSpontaneousTimer();
       startScheduledClockAndWeatherMonitor();
 
-      // 🟢 成功した完全初期化プロトコルの実行
       initDirectFirebase();
 
       document.getElementById("user-input").addEventListener("input", resetSpontaneousTimer);
@@ -379,40 +378,49 @@
       checkScheduledEvents(false);
     };
 
-    // 🚀 エディタアプリと同じ黄金の直接初期化
     function initDirectFirebase() {
       try {
         if (!firebase.apps.length) {
           firebase.initializeApp(firebaseConfig);
         }
         
-        // 1. シンガポールDBへ明示接続
         db = firebase.app().database("https://minerva-db-b3b4d-default-rtdb.asia-southeast1.firebasedatabase.app");
         auth = firebase.auth();
 
         const indicator = document.getElementById("sync-indicator");
 
-        // 2. 開いた瞬間に自動で合鍵（匿名認証）を取得！
-        auth.signInAnonymously().then((userCred) => {
-          console.log("🟢 メインアプリ：認証＆セキュア同期完了", userCred.user.uid);
-          if (indicator) {
-            indicator.innerText = "☁️ クラウド同期中 (OK)";
-            indicator.className = "sync-status sync-ok";
+        auth.onAuthStateChanged((user) => {
+          if (user) {
+            console.log("🟢 認証確立:", user.uid);
+            if (indicator) {
+              indicator.innerText = "☁️ クラウド同期中 (OK)";
+              indicator.className = "sync-status sync-ok";
+            }
+            setupCloudSync();
+          } else {
+            auth.signInAnonymously().catch((err) => {
+              console.error("Firebase Auth Error:", err);
+              if (indicator) {
+                indicator.innerText = `⚠️ 認証エラー (${err.code || '失敗'})`;
+                indicator.className = "sync-status sync-error";
+              }
+              loadPersonaHistory(currentPersona);
+            });
           }
-          // 3. 認証完了後にクラウド同期を開始！
-          setupCloudSync();
-        }).catch((err) => {
-          console.error("Firebase Auth Error:", err);
-          if (indicator) {
-            indicator.innerText = "⚠️ 認証エラー";
-            indicator.className = "sync-status sync-wait";
-          }
-          setupCloudSync();
         });
 
       } catch(e) {
         console.error("Firebase Init Error:", e);
       }
+    }
+
+    function reAuthForce() {
+      if (!auth) return;
+      auth.signOut().then(() => {
+        auth.signInAnonymously().then(() => {
+          alert("認証を再確立したわ！");
+        });
+      });
     }
 
     function initServiceWorkerAndPush() {
@@ -837,7 +845,6 @@
       scrollToBottom();
     }
 
-    // 🔒 認証済み状態でクラウド同期を実行
     function setupCloudSync() {
       if (!db || !syncRoomId) return;
       const targetP = document.getElementById("persona-select").value || currentPersona;
