@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>7大セクタ・完全自動解析 Web App (Sovereign Edition)</title>
+
+<!-- Firebase SDK (v10.12.0) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+<style>
+  :root {
+    --bg: #0f172a; --card: #1e293b; --border: #334155; --text: #f8fafc;
+    --muted: #94a3b8; --accent: #38bdf8; --accent-hover: #0284c7;
+    --firebase: #f59e0b; --firebase-hover: #d97706; --success: #34d399; --danger: #f87171;
+    --user-bg: #1e3a5f; --ai-bg: #282042; --kurisu-bg: #4a1d24;
+    --eri-bg: #1e3a4c; --maho-bg: #3d243c; --roundtable-bg: #2d2244;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text); padding: 14px; line-height: 1.5;
+  }
+  .container { max-width: 1380px; margin: 0 auto; }
+  header {
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 10px;
+    flex-wrap: wrap; gap: 8px;
+  }
+  h1 { font-size: 1.15rem; display: flex; align-items: center; gap: 6px; }
+  .badge { background: #10b981; font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; }
+
+  .connect-bar {
+    background: #131d2e; border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 12px; margin-bottom: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  }
+  .auth-indicator {
+    font-size: 0.8rem; background: #1e293b; padding: 4px 10px; border-radius: 6px;
+    border: 1px solid var(--border); font-weight: 600;
+  }
+
+  .sync-toggle-btn {
+    display: flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 600;
+    padding: 5px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; border: none;
+  }
+  .sync-toggle-btn.active {
+    background: #065f46; color: #34d399; border: 1px solid #059669;
+    box-shadow: 0 0 10px rgba(52, 211, 153, 0.2);
+  }
+  .sync-toggle-btn.paused {
+    background: #78350f; color: #fbbf24; border: 1px solid #d97706;
+  }
+
+  .room-tabs { display: flex; gap: 6px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 4px; }
+  .room-tab {
+    background: #1e293b; color: var(--muted); border: 1px solid var(--border);
+    padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.82rem;
+    font-weight: 500; white-space: nowrap; transition: 0.2s; display: flex; align-items: center; gap: 5px;
+  }
+  .room-tab:hover { background: #27354f; color: var(--text); }
+  .room-tab.active { background: #0284c7; color: #fff; border-color: var(--accent); font-weight: 600; }
+  .room-tab.roundtable-tab.active { background: #7c3aed; border-color: #a78bfa; }
+  .room-tab.kurisu-tab.active { background: #e11d48; border-color: #f43f5e; }
+  .room-badge { font-size: 0.7rem; background: rgba(0,0,0,0.35); padding: 1px 6px; border-radius: 10px; }
+
+  .filter-bar { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
+  .search-box {
+    flex: 1; min-width: 220px; background: #1e293b; border: 1px solid var(--border);
+    color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; outline: none;
+  }
+  .search-box:focus { border-color: var(--accent); }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 850px) { .grid { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px; display: flex; flex-direction: column; height: 68vh;
+  }
+  .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px; }
+  .card-title { font-size: 0.9rem; font-weight: 600; color: var(--accent); }
+  .btn-group { display: flex; gap: 5px; flex-wrap: wrap; }
+
+  button {
+    background: #334155; color: var(--text); border: 1px solid var(--border);
+    padding: 5px 10px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; transition: 0.2s;
+  }
+  button:hover { background: #475569; }
+  button.primary { background: var(--accent); color: #0f172a; font-weight: 600; border: none; }
+  button.primary:hover { background: var(--accent-hover); color: #fff; }
+  button.fb-btn { background: var(--firebase); color: #0f172a; font-weight: 600; border: none; }
+  button.fb-btn:hover { background: var(--firebase-hover); color: #fff; }
+
+  textarea {
+    flex: 1; width: 100%; background: #0b1120; color: #f1f5f9; border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px; font-family: 'Consolas', monospace; font-size: 0.85rem; resize: none; line-height: 1.4; outline: none;
+  }
+  textarea:focus { border-color: var(--accent); }
+
+  .preview-container {
+    flex: 1; background: #0b1120; border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
+  }
+  .bubble { padding: 8px 12px; border-radius: 8px; max-width: 88%; font-size: 0.85rem; }
+  .bubble-meta { font-size: 0.7rem; color: var(--muted); margin-bottom: 2px; display: flex; gap: 6px; }
+  .bubble.user { align-self: flex-end; background: var(--user-bg); border-left: 3px solid var(--accent); }
+  .bubble.ai { align-self: flex-start; background: var(--ai-bg); border-left: 3px solid #a78bfa; }
+  .bubble.kurisu { align-self: flex-start; background: var(--kurisu-bg); border-left: 3px solid #f43f5e; }
+  .bubble.eri { align-self: flex-start; background: var(--eri-bg); border-left: 3px solid #38bdf8; }
+  .bubble.maho { align-self: flex-start; background: var(--maho-bg); border-left: 3px solid #e879f9; }
+  .bubble.roundtable { align-self: flex-start; background: var(--roundtable-bg); border-left: 3px solid #c084fc; }
+
+  .status-bar { margin-top: 6px; font-size: 0.75rem; color: var(--muted); display: flex; justify-content: space-between; }
+  .toast {
+    position: fixed; bottom: 20px; right: 20px; background: #1e293b; color: white;
+    padding: 10px 16px; border-radius: 8px; border-left: 4px solid var(--accent);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5); display: none; font-size: 0.85rem; z-index: 1000;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>🔥 7大セクタ・完全自動解析 Web App <span class="badge">v1.0 Sovereign Edition</span></h1>
+    <div class="btn-group">
+      <button onclick="downloadCurrentText()">現在タブTXT</button>
+      <button onclick="downloadAllText()">全対話一括TXT</button>
+      <button onclick="downloadJSON()">全JSON</button>
+    </div>
+  </header>
+
+  <div class="connect-bar">
+    <div class="auth-indicator" id="authIndicator"><span style="color: var(--success)">● クラウド直結同期中 (OK)</span></div>
+    
+    <button id="liveSyncToggleBtn" class="sync-toggle-btn active" onclick="toggleLiveSync()">
+      <span>⚡ ライブ同期: ON</span>
+    </button>
+
+    <span style="color: var(--muted); font-size: 0.8rem; margin-left: auto;">プロジェクト: <strong>minerva-db-b3b4d</strong> (Singapore Direct)</span>
+  </div>
+
+  <div class="room-tabs" id="roomTabs"></div>
+
+  <div class="filter-bar">
+    <input type="text" class="search-box" id="searchKeyword" placeholder="🔍 ログ内をフリーワード検索（例: 起床、円卓、絵里、紅莉栖、真姫、相談、フェーズ0）" oninput="onSearchInput()">
+    <span id="searchResultCount" style="font-size: 0.8rem; color: var(--muted);"></span>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title" id="leftEditorTitle">📝 テキスト編集</span>
+        <button class="primary" onclick="convertTxtToDb()">反映 ➔</button>
+      </div>
+      <textarea id="txtEditor" placeholder="会話ログ..." onfocus="onEditorFocus()"></textarea>
+      <div class="status-bar"><span id="txtCount">行数: 0</span><span id="activeRoomInfo">対象: 未選択</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title" id="rightTabTitle">💬 チャットプレビュー</span>
+        <div class="btn-group">
+          <button class="fb-btn" onclick="directFetchFromFirebase(true)">⬇ 手動読込</button>
+          <button class="fb-btn" onclick="directSaveToFirebase()">⬆ 保存</button>
+          <button onclick="toggleRightView()" id="toggleViewBtn">JSON</button>
+          <button class="primary" onclick="convertDbToTxt()">⬅ 復元</button>
+        </div>
+      </div>
+      <textarea id="jsonEditor" style="display: none;"></textarea>
+      <div class="preview-container" id="chatPreview"></div>
+      <div class="status-bar"><span id="commStatus" style="color: var(--muted);">待機中</span><span>ハイブリッド同期システム</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const SINGAPORE_DB_URL = "https://minerva-db-b3b4d-default-rtdb.asia-southeast1.firebasedatabase.app";
+  const DB_PATH = "minerva_rooms/togami-room";
+
+  const CHARACTER_DEFS = [
+    { key: "全体ログ", name: "全対話 (タイムライン)", icon: "📜" },
+    { key: "円卓会議", name: "円卓会議 (全体セッション)", icon: "⚔️", aliases: ["円卓", "会議", "セッション", "みんな", "全員", "起床", "ブレスト"] },
+    { key: "紅莉栖", name: "紅莉栖", icon: "🧪", aliases: ["紅莉栖", "クリス", "kurisu", "makise", "Christina"] },
+    { key: "真姫", name: "真姫", icon: "🎹", aliases: ["真姫", "マキ", "maki", "西木野"] },
+    { key: "絵里", name: "絵里", icon: "✨", aliases: ["絵里", "エリ", "eri", "eli", "絢瀬"] },
+    { key: "マホ", name: "マホ", icon: "🌸", aliases: ["マホ", "maho", "京都"] },
+    { key: "ミネルバ", name: "ミネルバ", icon: "🦉", aliases: ["ミネルバ", "minerva"] },
+    { key: "フェーズ0", name: "フェーズ0", icon: "⚙️", aliases: ["フェーズ0", "phase0", "backend", "事務"] }
+  ];
+
+  let activeTabKey = "全体ログ";
+  let currentView = 'chat';
+  let rawDbData = {}; 
+  let allNormalizedMessages = []; 
+  let filteredMessagesMap = {};   
+  let dbInstance = null;
+  let isLiveSync = true;
+
+  function showToast(msg, isError = false) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.style.borderLeftColor = isError ? '#f87171' : 'var(--accent)';
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 4000);
+  }
+
+  function formatTime(ts) {
+    if (!ts) return "";
+    const num = Number(ts);
+    if (!isNaN(num) && num > 0) {
+      const d = new Date(num);
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    }
+    return String(ts);
+  }
+
+  function detectSpeakerFromText(rawSpeaker, text) {
+    if (rawSpeaker === "user" || rawSpeaker === "マスター" || rawSpeaker === "咎魅") return "咎魅";
+    if (rawSpeaker && rawSpeaker !== "model" && rawSpeaker !== "assistant" && rawSpeaker !== "不明") return rawSpeaker;
+    
+    let charCount = 0;
+    if (text.includes("絵里") || text.includes("【絵里】")) charCount++;
+    if (text.includes("紅莉栖") || text.includes("【紅莉栖】")) charCount++;
+    if (text.includes("マホ") || text.includes("【マホ】")) charCount++;
+    if (text.includes("真姫") || text.includes("【真姫】")) charCount++;
+    if (text.includes("ミネルバ") || text.includes("【ミネルバ】")) charCount++;
+
+    if (charCount >= 2) return "円卓会議";
+    if (text.includes("紅莉栖") || text.includes("クリス") || text.includes("……べ、別に")) return "紅莉栖";
+    if (text.includes("真姫") || text.includes("ナニそれ") || text.includes("西木野")) return "真姫";
+    if (text.includes("絵里") || text.includes("絢瀬") || text.includes("ふふ……っと")) return "絵里";
+    if (text.includes("マホ") || text.includes("〜やわ") || text.includes("〜どす")) return "マホ";
+    return "ミネルバ";
+  }
+
+  function normalizeHistory(list, fallbackKey = "ミネルバ") {
+    if (!Array.isArray(list)) return [];
+    return list.map(item => {
+      if (!item) return null;
+      let text = "";
+      if (item.parts && Array.isArray(item.parts)) {
+        text = item.parts.map(p => typeof p === 'string' ? p : (p.text || '')).join('\n');
+      } else if (item.text) text = item.text;
+      else if (item.message) text = item.message;
+
+      let rawSpeaker = item.speaker || item.role || item.sender || item.name || fallbackKey;
+      let speaker = detectSpeakerFromText(rawSpeaker, text);
+      let rawTimestamp = Number(item.timestamp || item.createdAt || item.updatedAt) || Date.now();
+      let timestamp = formatTime(rawTimestamp);
+      return { speaker, text, timestamp, rawTimestamp };
+    }).filter(x => x && (x.text || x.speaker !== "不明"));
+  }
+
+  function parseAllData(data) {
+    rawDbData = data || {};
+    let fullList = [];
+    
+    if (typeof data === 'object' && data !== null) {
+      for (const [key, val] of Object.entries(data)) {
+        if (val && typeof val === 'object') {
+          if (val.chatHistory && Array.isArray(val.chatHistory)) {
+            fullList = fullList.concat(normalizeHistory(val.chatHistory, key));
+          } else if (Array.isArray(val)) {
+            fullList = fullList.concat(normalizeHistory(val, key));
+          }
+        }
+      }
+    }
+    
+    fullList.sort((a, b) => (a.rawTimestamp || 0) - (b.rawTimestamp || 0));
+
+    const seen = new Set();
+    allNormalizedMessages = [];
+    for (const m of fullList) {
+      const hash = `${m.rawTimestamp}_${m.speaker}_${m.text.substring(0, 30)}`;
+      if (!seen.has(hash)) { 
+        seen.add(hash); 
+        allNormalizedMessages.push(m); 
+      }
+    }
+
+    filteredMessagesMap = {};
+    filteredMessagesMap["全体ログ"] = allNormalizedMessages;
+
+    CHARACTER_DEFS.forEach(def => {
+      if (def.key === "全体ログ") return;
+      
+      // 個別部屋データが存在する場合はそれを優先採用
+      if (data[def.key] && data[def.key].chatHistory && Array.isArray(data[def.key].chatHistory)) {
+        filteredMessagesMap[def.key] = normalizeHistory(data[def.key].chatHistory, def.key);
+      } else {
+        const aliases = def.aliases || [def.key];
+        filteredMessagesMap[def.key] = allNormalizedMessages.filter(m => 
+          aliases.some(a => m.speaker.toLowerCase().includes(a.toLowerCase())) || 
+          aliases.some(a => m.text.toLowerCase().includes(a.toLowerCase()))
+        );
+      }
+    });
+
+    renderTabs();
+    selectTab(activeTabKey);
+  }
+
+  function renderTabs() {
+    const tabsContainer = document.getElementById('roomTabs');
+    tabsContainer.innerHTML = '';
+    CHARACTER_DEFS.forEach(def => {
+      const count = (filteredMessagesMap[def.key] || []).length;
+      const btn = document.createElement('button');
+      let extra = def.key === '円卓会議' ? 'roundtable-tab' : (def.key === '紅莉栖' ? 'kurisu-tab' : '');
+      btn.className = `room-tab ${extra} ${def.key === activeTabKey ? 'active' : ''}`;
+      btn.innerHTML = `<span>${def.icon} ${def.name}</span> <span class="room-badge">${count}件</span>`;
+      btn.onclick = () => selectTab(def.key);
+      tabsContainer.appendChild(btn);
+    });
+  }
+
+  function selectTab(key) {
+    activeTabKey = key;
+    document.getElementById('searchKeyword').value = '';
+    document.getElementById('searchResultCount').textContent = '';
+    document.querySelectorAll('.room-tab').forEach(tab => {
+      if (tab.textContent.includes(key) || (key === "全体ログ" && tab.textContent.includes("全対話"))) tab.classList.add('active');
+      else tab.classList.remove('active');
+    });
+    displayMessages(filteredMessagesMap[key] || [], key);
+  }
+
+  function displayMessages(messages, title) {
+    document.getElementById('txtEditor').value = formatDataToTxt(messages);
+    document.getElementById('leftEditorTitle').textContent = `📝 テキスト編集 [${title}]`;
+    document.getElementById('activeRoomInfo').textContent = `現在選択: ${title} (${messages.length}件)`;
+    renderChat(messages);
+    updateStatus();
+  }
+
+  function onSearchInput() {
+    const query = document.getElementById('searchKeyword').value.trim().toLowerCase();
+    if (!query) { selectTab(activeTabKey); return; }
+    const matched = allNormalizedMessages.filter(m => m.speaker.toLowerCase().includes(query) || m.text.toLowerCase().includes(query));
+    document.getElementById('searchResultCount').textContent = `ヒット: ${matched.length}件`;
+    displayMessages(matched, `検索: "${query}"`);
+  }
+
+  function formatDataToTxt(messages) {
+    if (!messages || messages.length === 0) return "";
+    return messages.map(m => `[${m.speaker}] ${m.timestamp}\n${m.text}`).join('\n\n');
+  }
+
+  function parseTxtToMessages(rawTxt) {
+    const blocks = rawTxt.split(/\n\s*\n/);
+    const results = [];
+    for (const block of blocks) {
+      const trimmed = block.trim();
+      if (!trimmed) continue;
+      const lines = trimmed.split('\n');
+      const match = lines[0].match(/^\[([^\]]+)\]\s*(.*)$/);
+      if (match) {
+        results.push({ speaker: match[1].trim(), timestamp: match[2].trim() || formatTime(Date.now()), text: lines.slice(1).join('\n').trim() });
+      } else {
+        results.push({ speaker: "咎魅", timestamp: formatTime(Date.now()), text: trimmed });
+      }
+    }
+    return results;
+  }
+
+  function toggleLiveSync(forceState = null) {
+    isLiveSync = (forceState !== null) ? forceState : !isLiveSync;
+    const btn = document.getElementById('liveSyncToggleBtn');
+
+    if (isLiveSync) {
+      btn.className = 'sync-toggle-btn active';
+      btn.innerHTML = '<span>⚡ ライブ同期: ON</span>';
+      attachRealtimeListener();
+      showToast("⚡ ライブ同期を再開しました（自動更新中）");
+    } else {
+      btn.className = 'sync-toggle-btn paused';
+      btn.innerHTML = '<span>⏸ ライブ同期: OFF（編集中）</span>';
+      detachRealtimeListener();
+      showToast("⏸ ライブ同期を停止しました（編集保護モード）");
+    }
+  }
+
+  function onEditorFocus() {
+    if (isLiveSync) {
+      toggleLiveSync(false);
+    }
+  }
+
+  function attachRealtimeListener() {
+    if (!dbInstance) return;
+    const ref = dbInstance.ref(DB_PATH);
+    ref.off('value');
+    ref.on('value', (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        rawDbData = data;
+        document.getElementById('jsonEditor').value = JSON.stringify(data, null, 2);
+        parseAllData(data);
+        document.getElementById('commStatus').innerHTML = `<span style="color: var(--success)">⚡ ライブ同期中 (${allNormalizedMessages.length}件)</span>`;
+      }
+    }, (err) => {
+      document.getElementById('commStatus').innerHTML = `<span style="color: var(--danger)">✕ 受信エラー</span>`;
+    });
+  }
+
+  function detachRealtimeListener() {
+    if (dbInstance) {
+      dbInstance.ref(DB_PATH).off('value');
+      document.getElementById('commStatus').innerHTML = `<span style="color: var(--firebase)">⏸ 編集保護中（手動待機）</span>`;
+    }
+  }
+
+  function directFetchFromFirebase(manual = false) {
+    if (!dbInstance) return;
+    document.getElementById('commStatus').textContent = "通信中 (読込)...";
+    dbInstance.ref(DB_PATH).once('value').then(snapshot => {
+      const data = snapshot.val();
+      if (!data) { document.getElementById('commStatus').textContent = "データなし"; return; }
+      rawDbData = data;
+      document.getElementById('jsonEditor').value = JSON.stringify(data, null, 2);
+      parseAllData(data);
+      document.getElementById('commStatus').innerHTML = `<span style="color: var(--success)">● 読込完了 (${allNormalizedMessages.length}件)</span>`;
+      if (manual) showToast(`全 ${allNormalizedMessages.length}件の対話ログを読み込みました！`);
+    }).catch(err => {
+      document.getElementById('commStatus').innerHTML = `<span style="color: var(--danger)">✕ 読込失敗</span>`;
+      showToast("読込エラー: " + err.message, true);
+    });
+  }
+
+  async function directSaveToFirebase() {
+    document.getElementById('commStatus').textContent = "通信中 (保存)...";
+    try {
+      const txt = document.getElementById('txtEditor').value;
+      const editedMessages = parseTxtToMessages(txt);
+      const chatHistory = editedMessages.map(m => ({
+        role: (m.speaker === "マスター" || m.speaker === "user" || m.speaker === "咎魅") ? "user" : "model",
+        speaker: m.speaker,
+        parts: [{ text: m.text }],
+        timestamp: m.timestamp ? (Date.parse(m.timestamp) || Date.now()) : Date.now()
+      }));
+
+      const targetKey = activeTabKey === "全体ログ" ? "円卓会議" : activeTabKey;
+      await dbInstance.ref(`${DB_PATH}/${targetKey}`).update({
+        chatHistory: chatHistory,
+        updatedAt: Date.now()
+      });
+
+      directFetchFromFirebase();
+      document.getElementById('commStatus').innerHTML = '<span style="color: var(--success)">● 保存成功</span>';
+      showToast(`「${targetKey}」への保存が完了しました！`);
+      toggleLiveSync(true);
+    } catch (e) {
+      document.getElementById('commStatus').innerHTML = '<span style="color: var(--danger)">✕ 保存失敗</span>';
+      showToast("保存エラー: " + e.message, true);
+    }
+  }
+
+  function renderChat(messages) {
+    const container = document.getElementById('chatPreview');
+    container.innerHTML = '';
+    if (!messages || messages.length === 0) { container.innerHTML = `<div style="text-align:center; color:var(--muted); margin-top:30px;">メッセージはありません</div>`; return; }
+    messages.forEach(m => {
+      const isUser = m.speaker === 'マスター' || m.speaker === 'user' || m.speaker === '咎魅';
+      const bubble = document.createElement('div');
+      let c = isUser ? 'user' : 'ai';
+      if (m.speaker.includes('円卓')) c = 'roundtable';
+      else if (m.speaker.includes('紅莉栖')) c = 'kurisu';
+      else if (m.speaker.includes('真姫')) c = 'ai';
+      else if (m.speaker.includes('絵里')) c = 'eri';
+      else if (m.speaker.includes('マホ')) c = 'maho';
+      bubble.className = `bubble ${c}`;
+      bubble.innerHTML = `<div class="bubble-meta"><strong>${m.speaker}</strong> <span>${m.timestamp}</span></div><div style="white-space: pre-wrap;">${m.text}</div>`;
+      container.appendChild(bubble);
+    });
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function convertTxtToDb() {
+    const messages = parseTxtToMessages(document.getElementById('txtEditor').value);
+    filteredMessagesMap[activeTabKey] = messages;
+    renderChat(messages);
+    updateStatus();
+    showToast("プレビューを更新しました");
+  }
+
+  function convertDbToTxt() {
+    try {
+      const data = JSON.parse(document.getElementById('jsonEditor').value);
+      parseAllData(data);
+      showToast("復元完了");
+    } catch(e) { showToast("JSONエラー", true); }
+  }
+
+  function toggleRightView() {
+    const jsonEl = document.getElementById('jsonEditor');
+    const chatEl = document.getElementById('chatPreview');
+    if (currentView === 'chat') {
+      jsonEl.value = JSON.stringify(rawDbData, null, 2);
+      jsonEl.style.display = 'block'; chatEl.style.display = 'none';
+      document.getElementById('toggleViewBtn').textContent = 'チャット'; currentView = 'json';
+    } else {
+      jsonEl.style.display = 'none'; chatEl.style.display = 'flex';
+      document.getElementById('toggleViewBtn').textContent = 'JSON'; currentView = 'chat';
+    }
+  }
+
+  function updateStatus() {
+    const txt = document.getElementById('txtEditor').value;
+    document.getElementById('txtCount').textContent = `行数: ${txt ? txt.split('\n').length : 0}`;
+  }
+
+  function downloadCurrentText() {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([document.getElementById('txtEditor').value], { type: 'text/plain;charset=utf-8' }));
+    a.download = `log_${activeTabKey}.txt`; a.click();
+  }
+
+  function downloadAllText() {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([formatDataToTxt(allNormalizedMessages)], { type: 'text/plain;charset=utf-8' }));
+    a.download = `all_dialogues.txt`; a.click();
+  }
+
+  function downloadJSON() {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(rawDbData, null, 2)], { type: 'application/json;charset=utf-8' }));
+    a.download = `full_db.json`; a.click();
+  }
+
+  window.onload = () => {
+    document.getElementById('txtEditor').addEventListener('input', updateStatus);
+
+    try {
+      if (!firebase.apps.length) {
+        firebase.initializeApp({ databaseURL: SINGAPORE_DB_URL });
+      }
+      dbInstance = firebase.app().database(SINGAPORE_DB_URL);
+      document.getElementById('authIndicator').innerHTML = `<span style="color: var(--success)">● クラウド直結同期中 (OK)</span>`;
+      attachRealtimeListener();
+    } catch(e) {
+      document.getElementById('authIndicator').innerHTML = `<span style="color: var(--danger)">✕ 初期化失敗: ${e.message}</span>`;
+    }
+  };
+</script>
+</body>
+</html>
