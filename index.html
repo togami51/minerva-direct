@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ミネルバの神殿 - Direct Edition</title>
   
-  <!-- Firebase Cloud SDK (Compat) -->
+  <!-- Firebase SDK (Compat) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
   <style>
@@ -21,6 +22,9 @@
     .token-badge:hover { filter: brightness(1.2); }
     
     .fatigue-badge { font-size: 0.72rem; background: #221a2e; border: 1px solid #a855f7; color: #d8b4fe; padding: 2px 8px; border-radius: 12px; font-weight: bold; }
+    .sync-status { font-size: 0.72rem; padding: 2px 6px; border-radius: 10px; font-weight: bold; }
+    .sync-ok { background: #064e3b; color: #34d399; border: 1px solid #059669; }
+    .sync-wait { background: #451a03; color: #fbbf24; border: 1px solid #d97706; }
 
     .header-right { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 
@@ -31,11 +35,10 @@
     .res-meter { width: 30px; height: 5px; background: #2a2a3c; border-radius: 3px; overflow: hidden; display: inline-block; }
     .res-fill { height: 100%; width: 50%; background: linear-gradient(90deg, #3b82f6, #ec4899); transition: width 0.5s ease; }
 
-    #key-bar { background: #181822; padding: 4px 10px; display: flex; gap: 4px; border-bottom: 1px solid #282838; font-size: 0.75rem; align-items: center; flex-wrap: wrap; }
+    #key-bar { background: #181822; padding: 4px 10px; display: flex; gap: 6px; border-bottom: 1px solid #282838; font-size: 0.75rem; align-items: center; flex-wrap: wrap; }
     .input-field { background: #222230; border: 1px solid #3a3a50; color: #fff; padding: 4px 6px; border-radius: 6px; font-size: 0.75rem; }
-    #key-input { flex: 2; min-width: 110px; }
-    #firebase-config-input { flex: 2; min-width: 130px; }
-    #sync-id-input { flex: 1; min-width: 70px; }
+    #key-input { flex: 2; min-width: 140px; }
+    #sync-id-input { flex: 1; min-width: 90px; }
     
     .btn { background: #4a6fa5; border: none; color: #fff; padding: 4px 7px; border-radius: 6px; cursor: pointer; font-size: 0.72rem; font-weight: bold; }
     .btn:hover { filter: brightness(1.1); }
@@ -111,7 +114,8 @@
   <header>
     <div class="header-left">
       <span>💫 Minerva Direct</span>
-      <span class="version-tag">ver.26.08.17.21.50</span>
+      <span class="version-tag">ver.26.08.20.11.35</span>
+      <span id="sync-indicator" class="sync-status sync-wait">☁️ 認証待機中...</span>
       <span id="token-usage-display" class="token-badge" onclick="manualEditMonthlyTokens()" title="クリックして今月の累計トークン数を手動修正・リセット">🪙 計算中...</span>
       <span id="fatigue-display" class="fatigue-badge">💓 情動: 平穏 (Lv.1)</span>
     </div>
@@ -181,8 +185,7 @@
 
   <div id="key-bar">
     <input type="password" id="key-input" class="input-field" placeholder="Gemini API Key" />
-    <input type="password" id="firebase-config-input" class="input-field" placeholder="Firebase Config (JSON貼り付け)" title="FirebaseのConfig JSONをそのまま貼り付けてね" />
-    <input type="text" id="sync-id-input" class="input-field" placeholder="同期合い言葉" />
+    <input type="text" id="sync-id-input" class="input-field" placeholder="同期合い言葉 (例: togami-room)" />
     <button class="btn" onclick="saveSettings()">設定保存</button>
   </div>
 
@@ -205,10 +208,23 @@
   </div>
 
   <script>
+    // 🏛️ マスター専用 Firebase 完全組込構成
+    const firebaseConfig = {
+      apiKey: "AIzaSyBckN3bKcCWOMqzLqEIqmuktKej_sF5ckk",
+      authDomain: "minerva-db-b3b4d.firebaseapp.com",
+      databaseURL: "https://minerva-db-b3b4d-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "minerva-db-b3b4d",
+      storageBucket: "minerva-db-b3b4d.firebasestorage.app",
+      messagingSenderId: "780637239141",
+      appId: "1:780637239141:web:8966fbf0fa0abdcc2a538c",
+      measurementId: "G-8XHWBJT8NM"
+    };
+
     let db = null;
+    let auth = null;
     let currentPersona = "円卓会議";
     let chatHistory = [];
-    let syncRoomId = "";
+    let syncRoomId = "togami-room";
     let voiceMode = "minerva_only";
     let currentPanelType = "memory";
     let isVibrationEnabled = true;
@@ -299,18 +315,12 @@
       const savedKey = localStorage.getItem("minerva_gemini_key");
       if (savedKey) document.getElementById("key-input").value = savedKey;
       
-      const savedFbConfig = localStorage.getItem("minerva_firebase_config");
-      if (savedFbConfig) {
-        document.getElementById("firebase-config-input").value = savedFbConfig;
-        initFirebaseDynamic(savedFbConfig);
-      }
-
       syncRoomId = localStorage.getItem("minerva_sync_room_id") || "togami-room";
       document.getElementById("sync-id-input").value = syncRoomId;
       const savedPersona = localStorage.getItem("minerva_selected_persona") || "円卓会議";
       document.getElementById("persona-select").value = savedPersona;
       currentPersona = savedPersona;
-      
+
       voiceMode = localStorage.getItem("minerva_voice_mode") || "minerva_only";
       document.getElementById("voice-mode-select").value = voiceMode;
       
@@ -334,13 +344,13 @@
       }
 
       initServiceWorkerAndPush();
-
       updateCostUI(0);
-      loadPersonaHistory(savedPersona);
-      setupCloudSync();
       initSpeechRecognition();
       resetSpontaneousTimer();
       startScheduledClockAndWeatherMonitor();
+
+      // 🟢 成功した完全初期化プロトコルの実行
+      initDirectFirebase();
 
       document.getElementById("user-input").addEventListener("input", resetSpontaneousTimer);
 
@@ -369,24 +379,39 @@
       checkScheduledEvents(false);
     };
 
-    function initFirebaseDynamic(rawConfigStr) {
-      if (!rawConfigStr) return;
+    // 🚀 エディタアプリと同じ黄金の直接初期化
+    function initDirectFirebase() {
       try {
-        let configObj = null;
-        let cleanStr = rawConfigStr.trim();
-        if (cleanStr.includes("{")) {
-          cleanStr = cleanStr.replace(/^[^{]*/, '').replace(/[^}]*$/, '');
-          configObj = JSON.parse(cleanStr);
+        if (!firebase.apps.length) {
+          firebase.initializeApp(firebaseConfig);
         }
-        if (configObj) {
-          if (!firebase.apps.length) {
-            firebase.initializeApp(configObj);
+        
+        // 1. シンガポールDBへ明示接続
+        db = firebase.app().database("https://minerva-db-b3b4d-default-rtdb.asia-southeast1.firebasedatabase.app");
+        auth = firebase.auth();
+
+        const indicator = document.getElementById("sync-indicator");
+
+        // 2. 開いた瞬間に自動で合鍵（匿名認証）を取得！
+        auth.signInAnonymously().then((userCred) => {
+          console.log("🟢 メインアプリ：認証＆セキュア同期完了", userCred.user.uid);
+          if (indicator) {
+            indicator.innerText = "☁️ クラウド同期中 (OK)";
+            indicator.className = "sync-status sync-ok";
           }
-          db = firebase.database();
+          // 3. 認証完了後にクラウド同期を開始！
           setupCloudSync();
-        }
+        }).catch((err) => {
+          console.error("Firebase Auth Error:", err);
+          if (indicator) {
+            indicator.innerText = "⚠️ 認証エラー";
+            indicator.className = "sync-status sync-wait";
+          }
+          setupCloudSync();
+        });
+
       } catch(e) {
-        console.log("Firebase Init Error:", e);
+        console.error("Firebase Init Error:", e);
       }
     }
 
@@ -614,20 +639,15 @@
 
     function saveSettings() {
       const key = document.getElementById("key-input").value.trim();
-      const fbConfig = document.getElementById("firebase-config-input").value.trim();
       const roomId = document.getElementById("sync-id-input").value.trim();
       
       if (key) localStorage.setItem("minerva_gemini_key", key);
-      if (fbConfig) {
-        localStorage.setItem("minerva_firebase_config", fbConfig);
-        initFirebaseDynamic(fbConfig);
-      }
       if (roomId) { 
         localStorage.setItem("minerva_sync_room_id", roomId); 
         syncRoomId = roomId; 
       }
       setupCloudSync();
-      alert("設定を保存したわ！ Firebase同期も動的に更新されたわ！");
+      alert("設定を保存したわ！ クラウド同期を再接続したわ！");
     }
 
     function changePersona() {
@@ -817,28 +837,44 @@
       scrollToBottom();
     }
 
+    // 🔒 認証済み状態でクラウド同期を実行
     function setupCloudSync() {
       if (!db || !syncRoomId) return;
-      const roomRef = db.ref(`minerva_rooms/${syncRoomId}/${currentPersona}`);
+      const targetP = document.getElementById("persona-select").value || currentPersona;
+      
+      db.ref(`minerva_rooms/${syncRoomId}`).off();
+
+      const roomRef = db.ref(`minerva_rooms/${syncRoomId}/${targetP}`);
       roomRef.on('value', (snapshot) => {
         const data = snapshot.val();
-        if (data && data.chatHistory) {
-          chatHistory = data.chatHistory; cleanOldHistory(); renderChatBox();
-          localStorage.setItem(`minerva_chat_history_${currentPersona}`, JSON.stringify(chatHistory));
+        if (data) {
+          if (data.chatHistory && Array.isArray(data.chatHistory)) {
+            chatHistory = data.chatHistory;
+            cleanOldHistory();
+            renderChatBox();
+            localStorage.setItem(`minerva_chat_history_${targetP}`, JSON.stringify(chatHistory));
+          }
+          if (data.memoryText) {
+            localStorage.setItem(`minerva_memory_${targetP}`, data.memoryText);
+          }
         }
+      }, (err) => {
+        console.error("Firebase Database Read Error:", err);
       });
 
       const metricsRef = db.ref(`minerva_rooms/${syncRoomId}/global_metrics`);
       metricsRef.on('value', (snapshot) => {
         const data = snapshot.val();
-        if (data && typeof data.monthlyTokens === "number" && data.monthlyTokens > monthlyTokens) {
-          monthlyTokens = data.monthlyTokens;
-          localStorage.setItem(currentMonthKey, monthlyTokens);
-          localStorage.setItem(fallbackPersistentKey, monthlyTokens);
-          updateCostUI(0);
-        }
-        if (data && data.battlemapText) {
-          localStorage.setItem("minerva_battlemap", data.battlemapText);
+        if (data) {
+          if (typeof data.monthlyTokens === "number" && data.monthlyTokens > monthlyTokens) {
+            monthlyTokens = data.monthlyTokens;
+            localStorage.setItem(currentMonthKey, monthlyTokens);
+            localStorage.setItem(fallbackPersistentKey, monthlyTokens);
+            updateCostUI(0);
+          }
+          if (data.battlemapText) {
+            localStorage.setItem("minerva_battlemap", data.battlemapText);
+          }
         }
       });
     }
@@ -846,10 +882,12 @@
     function pushDataToCloud() {
       if (!db || !syncRoomId) return;
       const targetP = document.getElementById("persona-select").value || currentPersona;
-      db.ref(`minerva_rooms/${syncRoomId}/${targetP}`).set({
+      db.ref(`minerva_rooms/${syncRoomId}/${targetP}`).update({
         chatHistory: chatHistory,
         memoryText: localStorage.getItem(`minerva_memory_${targetP}`) || "",
         updatedAt: Date.now()
+      }).catch(err => {
+        console.error("Firebase Push Error:", err);
       });
       db.ref(`minerva_rooms/${syncRoomId}/global_metrics`).update({
         monthlyTokens: monthlyTokens,
@@ -858,7 +896,6 @@
       });
     }
 
-    // 🧠 「🧠 記憶」パネル：選択中のペルソナ固有の記憶を100%確実に開閉・保存
     function openPanel(type) {
       currentPanelType = type;
       const p = document.getElementById("panel-container");
@@ -1050,7 +1087,7 @@
       sendBtn.disabled = true;
 
       const now = new Date();
-      const weatherContext = `【環境・五感同期設定】現在時刻: ${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${now.getHours()}時${now.getMinutes()}分。場所: 茨城県取手市。8月半ばの夜の空気感を感じる臨場感を演出せよ。`;
+      const weatherContext = `【環境・五感同期設定】現在時刻: ${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${now.getHours()}時${now.getMinutes()}分。場所: 茨城県取手市。8月半ばの空気感を感じる臨場感を演出せよ。`;
 
       let dynamicPersonaRegistry = "";
       let dynamicWhisperInstruction = "";
@@ -1273,7 +1310,10 @@
       }
     }
 
-    function saveChatHistory() { localStorage.setItem(`minerva_chat_history_${currentPersona}`, JSON.stringify(chatHistory)); }
+    function saveChatHistory() { 
+      const targetP = document.getElementById("persona-select").value || currentPersona;
+      localStorage.setItem(`minerva_chat_history_${targetP}`, JSON.stringify(chatHistory)); 
+    }
     function appendMessage(r, t) { const d = document.createElement("div"); d.className = `msg ${r}`; d.innerText = t; document.getElementById("chat-box").appendChild(d); return d; }
     function scrollToBottom() { const b = document.getElementById("chat-box"); b.scrollTop = b.scrollHeight; }
     function scrollToBottomSmooth() { const b = document.getElementById("chat-box"); b.scrollTo({ top: b.scrollHeight, behavior: 'smooth' }); }
