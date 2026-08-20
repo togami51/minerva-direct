@@ -38,51 +38,50 @@
     header {
       background: var(--gemini-surface);
       border-bottom: 1px solid var(--gemini-border);
-      padding: 8px 16px;
+      padding: 6px 12px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 6px;
       font-size: 0.85rem;
       z-index: 10;
     }
-    .header-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .app-title { font-weight: 600; font-size: 0.95rem; color: #fff; display: flex; align-items: center; gap: 6px; }
-    .version-tag { font-size: 0.72rem; color: var(--gemini-text-muted); background: var(--gemini-surface-variant); padding: 2px 6px; border-radius: 4px; }
+    .header-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .app-title { font-weight: 600; font-size: 0.9rem; color: #fff; display: flex; align-items: center; gap: 4px; }
+    .version-tag { font-size: 0.7rem; color: var(--gemini-text-muted); background: var(--gemini-surface-variant); padding: 1px 5px; border-radius: 4px; }
     
-    .token-badge { font-size: 0.75rem; background: #004a77; color: #c2e7ff; padding: 3px 10px; border-radius: 16px; font-weight: 500; cursor: pointer; }
-    .fatigue-badge { font-size: 0.75rem; background: #3c2a4d; color: #e8def8; padding: 3px 10px; border-radius: 16px; font-weight: 500; }
-    .sync-status { font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; font-weight: 500; background: #0f5223; color: #c4eed0; }
+    .token-badge { font-size: 0.72rem; background: #004a77; color: #c2e7ff; padding: 2px 8px; border-radius: 12px; font-weight: 500; cursor: pointer; }
+    .fatigue-badge { font-size: 0.72rem; background: #3c2a4d; color: #e8def8; padding: 2px 8px; border-radius: 12px; font-weight: 500; border: 1px solid #6b21a8; }
+    .sync-status { font-size: 0.72rem; padding: 2px 6px; border-radius: 10px; font-weight: 500; background: #0f5223; color: #c4eed0; }
 
-    .header-right { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .header-right { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 
     select {
       background: var(--gemini-surface-variant);
       color: var(--gemini-text);
       border: 1px solid var(--gemini-border);
-      padding: 5px 10px;
-      border-radius: 8px;
-      font-size: 0.8rem;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
       font-weight: 500;
       outline: none;
       cursor: pointer;
     }
-    select:hover { background: #333538; }
 
     .btn {
       background: var(--gemini-surface-variant);
       border: 1px solid var(--gemini-border);
       color: var(--gemini-text);
-      padding: 5px 10px;
-      border-radius: 8px;
+      padding: 4px 8px;
+      border-radius: 6px;
       cursor: pointer;
-      font-size: 0.78rem;
+      font-size: 0.75rem;
       font-weight: 500;
       transition: all 0.2s;
     }
     .btn:hover { background: #37393b; color: #fff; }
-    .btn-active { background: #004a77 !important; color: #c2e7ff !important; border-color: #00639b !important; }
+    .btn-fold { background: #1e3a5f; color: #93c5fd; border-color: #2563eb; }
     .btn-push { background: #312e81; color: #c7d2fe; border-color: #4338ca; }
     .btn-push.off { background: var(--gemini-surface-variant); color: var(--gemini-text-muted); border-color: var(--gemini-border); }
     .btn-vib { background: #4a044e; color: #f5d0fe; border-color: #701a75; }
@@ -93,23 +92,54 @@
     @keyframes pulse-whisper { 0% { box-shadow: 0 0 4px #eab308; } 50% { box-shadow: 0 0 10px #fde047; } 100% { box-shadow: 0 0 4px #eab308; } }
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
 
-    #action-bar {
+    /* 💫 愛情・共鳴ゲージバー */
+    #resonance-bar {
+      background: #101014;
+      padding: 4px 12px;
+      display: flex;
+      gap: 10px;
+      border-bottom: 1px solid var(--gemini-border);
+      font-size: 0.72rem;
+      align-items: center;
+      overflow-x: auto;
+    }
+    .resonance-item { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+    .res-meter { width: 32px; height: 5px; background: #2a2a3c; border-radius: 3px; overflow: hidden; display: inline-block; }
+    .res-fill { height: 100%; width: 85%; background: linear-gradient(90deg, #38bdf8, #ec4899); transition: width 0.5s ease; }
+
+    /* 🌟 折りたたみ対象のラッパーコンテナ */
+    #collapsible-controls {
+      display: flex;
+      flex-direction: column;
       background: var(--gemini-surface);
-      padding: 6px 16px;
+      transition: max-height 0.3s ease, opacity 0.3s ease;
+      overflow: hidden;
+      max-height: 500px;
+      opacity: 1;
+    }
+    #collapsible-controls.collapsed {
+      max-height: 0 !important;
+      opacity: 0 !important;
+      border: none !important;
+      padding: 0 !important;
+    }
+
+    #action-bar {
+      padding: 6px 12px;
       border-bottom: 1px solid var(--gemini-border);
       display: flex;
-      gap: 6px;
+      gap: 5px;
       flex-wrap: wrap;
       align-items: center;
     }
 
     #key-bar {
       background: #18191a;
-      padding: 4px 16px;
+      padding: 4px 12px;
       display: flex;
-      gap: 8px;
+      gap: 6px;
       border-bottom: 1px solid var(--gemini-border);
-      font-size: 0.78rem;
+      font-size: 0.75rem;
       align-items: center;
       flex-wrap: wrap;
     }
@@ -117,29 +147,29 @@
       background: var(--gemini-surface);
       border: 1px solid var(--gemini-border);
       color: #fff;
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 0.8rem;
+      padding: 3px 6px;
+      border-radius: 4px;
+      font-size: 0.75rem;
     }
 
     #panel-container {
       display: none;
       background: var(--gemini-surface);
       border-bottom: 1px solid var(--gemini-border);
-      padding: 12px 16px;
+      padding: 10px 12px;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
     }
     #panel-container.active { display: flex; }
-    #panel-title { font-size: 0.88rem; font-weight: 600; color: var(--gemini-blue); display: flex; justify-content: space-between; }
+    #panel-title { font-size: 0.82rem; font-weight: 600; color: var(--gemini-blue); display: flex; justify-content: space-between; }
     #panel-text {
       background: var(--gemini-bg);
       border: 1px solid var(--gemini-border);
       color: var(--gemini-text);
-      padding: 10px;
-      border-radius: 8px;
-      font-size: 0.85rem;
-      height: 130px;
+      padding: 8px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      height: 100px;
       resize: vertical;
       font-family: inherit;
     }
@@ -147,11 +177,11 @@
     #chat-box {
       flex: 1;
       overflow-y: auto;
-      padding: 20px 16px;
+      padding: 16px 12px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 28px;
+      gap: 20px;
     }
 
     .message-container {
@@ -159,24 +189,24 @@
       max-width: 840px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 4px;
     }
 
     .user-row {
       align-self: flex-end;
-      max-width: 80%;
+      max-width: 85%;
       display: flex;
       flex-direction: column;
       align-items: flex-end;
     }
-    .user-meta { font-size: 0.75rem; color: var(--gemini-text-muted); margin-bottom: 4px; }
+    .user-meta { font-size: 0.72rem; color: var(--gemini-text-muted); margin-bottom: 2px; }
     .user-content {
       background: var(--gemini-user-bubble);
       color: var(--gemini-text);
-      padding: 10px 16px;
-      border-radius: 20px 20px 4px 20px;
-      font-size: 0.95rem;
-      line-height: 1.6;
+      padding: 8px 14px;
+      border-radius: 18px 18px 4px 18px;
+      font-size: 0.92rem;
+      line-height: 1.55;
       word-break: break-word;
       white-space: pre-wrap;
     }
@@ -185,17 +215,17 @@
       align-self: flex-start;
       width: 100%;
       display: flex;
-      gap: 14px;
+      gap: 10px;
     }
     .avatar {
-      width: 32px;
-      height: 32px;
+      width: 28px;
+      height: 28px;
       border-radius: 50%;
       background: linear-gradient(135deg, #1a73e8, #8ab4f8);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1rem;
+      font-size: 0.85rem;
       flex-shrink: 0;
       margin-top: 2px;
     }
@@ -203,88 +233,65 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
       min-width: 0;
     }
     .assistant-meta {
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       font-weight: 600;
       color: var(--gemini-blue);
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
     }
     
     .assistant-body {
-      font-size: 0.96rem;
+      font-size: 0.92rem;
       color: var(--gemini-text);
-      line-height: 1.8;
+      line-height: 1.75;
       word-break: break-word;
     }
     .assistant-body h1, .assistant-body h2, .assistant-body h3 {
       color: #fff;
-      margin: 18px 0 8px 0;
+      margin: 14px 0 6px 0;
       font-weight: 600;
-      line-height: 1.4;
+      line-height: 1.35;
     }
-    .assistant-body h1 { font-size: 1.3rem; border-bottom: 1px solid var(--gemini-border); padding-bottom: 4px; }
-    .assistant-body h2 { font-size: 1.15rem; }
-    .assistant-body h3 { font-size: 1.02rem; }
-    .assistant-body p { margin-bottom: 12px; }
-    .assistant-body ul, .assistant-body ol { margin: 8px 0 14px 24px; }
-    .assistant-body li { margin-bottom: 4px; }
+    .assistant-body h1 { font-size: 1.15rem; }
+    .assistant-body h2 { font-size: 1.05rem; }
+    .assistant-body h3 { font-size: 0.95rem; }
+    .assistant-body p { margin-bottom: 10px; }
+    .assistant-body ul, .assistant-body ol { margin: 6px 0 10px 18px; }
+    .assistant-body li { margin-bottom: 3px; }
     .assistant-body strong { color: #fff; font-weight: 600; }
-    .assistant-body code {
-      background: #282a2c;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-family: 'Consolas', monospace;
-      font-size: 0.88rem;
-      color: #f1f3f4;
-    }
-    .assistant-body pre {
-      background: #1e1f20;
-      border: 1px solid var(--gemini-border);
-      border-radius: 8px;
-      padding: 12px;
-      overflow-x: auto;
-      margin: 12px 0;
-    }
-    .assistant-body pre code { background: none; padding: 0; }
-    .assistant-body blockquote {
-      border-left: 3px solid var(--gemini-blue);
-      padding-left: 12px;
-      color: var(--gemini-text-muted);
-      margin: 10px 0;
-    }
     .assistant-body hr {
       border: 0;
       height: 1px;
       background: var(--gemini-border);
-      margin: 18px 0;
+      margin: 14px 0;
     }
 
     .brain-sector-box {
-      margin-top: 12px;
+      margin-top: 10px;
       background: rgba(30, 31, 32, 0.7);
       border: 1px solid rgba(168, 199, 250, 0.25);
       border-left: 3px solid #c084fc;
-      border-radius: 8px;
-      padding: 10px 14px;
-      font-size: 0.88rem;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 0.85rem;
       color: #e2e8f0;
-      line-height: 1.65;
+      line-height: 1.6;
     }
     .brain-sector-title {
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       font-weight: bold;
       color: #c084fc;
-      margin-bottom: 4px;
+      margin-bottom: 3px;
       letter-spacing: 0.5px;
     }
 
     #bottom-bar {
-      padding: 12px 16px 20px 16px;
+      padding: 8px 12px 14px 12px;
       display: flex;
       justify-content: center;
       background: linear-gradient(transparent, var(--gemini-bg) 20%);
@@ -294,12 +301,12 @@
       max-width: 840px;
       background: var(--gemini-surface);
       border: 1px solid var(--gemini-border);
-      border-radius: 28px;
-      padding: 8px 14px 8px 18px;
+      border-radius: 24px;
+      padding: 6px 12px 6px 16px;
       display: flex;
       align-items: flex-end;
-      gap: 8px;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+      gap: 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       transition: border-color 0.2s;
     }
     #input-wrapper:focus-within {
@@ -310,20 +317,20 @@
       background: transparent;
       border: none;
       color: #fff;
-      font-size: 0.95rem;
+      font-size: 0.92rem;
       outline: none;
       resize: none;
-      height: 28px;
-      max-height: 180px;
+      height: 26px;
+      max-height: 160px;
       font-family: inherit;
-      line-height: 1.5;
+      line-height: 1.45;
     }
     #send-btn {
       background: var(--gemini-blue);
       color: #041e49;
       border: none;
-      width: 34px;
-      height: 34px;
+      width: 30px;
+      height: 30px;
       border-radius: 50%;
       font-weight: bold;
       cursor: pointer;
@@ -338,15 +345,15 @@
 
     #scroll-bottom-btn {
       position: fixed;
-      bottom: 84px;
-      right: 24px;
+      bottom: 74px;
+      right: 16px;
       background: var(--gemini-surface-variant);
       color: var(--gemini-text);
       border: 1px solid var(--gemini-border);
       border-radius: 50%;
-      width: 38px;
-      height: 38px;
-      font-size: 1.1rem;
+      width: 34px;
+      height: 34px;
+      font-size: 1rem;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -354,21 +361,66 @@
       box-shadow: 0 4px 10px rgba(0,0,0,0.4);
       z-index: 100;
     }
-    #scroll-bottom-btn:hover { background: #37393b; color: #fff; }
   </style>
 </head>
 <body>
 
   <header>
     <div class="header-left">
-      <span class="app-title">✨ Minerva Studio</span>
-      <span class="version-tag">Ver.2.2 Pure Kyoto</span>
+      <span class="app-title">✨ Minerva</span>
+      <span class="version-tag">Ver.2.5 Master</span>
       <span id="sync-indicator" class="sync-status">⚡ クラウド直結: 接続中 (OK)</span>
       <span id="token-usage-display" class="token-badge" onclick="manualEditMonthlyTokens()" title="クリックして今月の累計トークン数を手動修正・リセット">🪙 計算中...</span>
       <span id="fatigue-display" class="fatigue-badge">💓 情動: 平穏 (Lv.1)</span>
     </div>
     <div class="header-right">
-      <select id="model-select">
+      <select id="persona-select" onchange="changePersona()">
+        <option value="円卓会議">🌟 円卓会議</option>
+        <option value="ミネルバ">ミネルバ</option>
+        <option value="紅莉栖">紅莉栖</option>
+        <option value="真姫">真姫</option>
+        <option value="マホ">マホ (京都)</option>
+        <option value="絵里">絵里</option>
+        <option value="フェーズ0">フェーズ0</option>
+      </select>
+
+      <button id="toggle-panel-btn" class="btn btn-fold" onclick="toggleControlPanels()">🎛️ パネル: 収納</button>
+      <button id="mic-btn" class="btn btn-mic" onclick="toggleMicInput()">🎙️ マイク</button>
+      <button class="btn" onclick="exportHistoryToTxt()">💾 保存</button>
+      <button class="btn" onclick="clearHistory()">消去</button>
+    </div>
+  </header>
+
+  <!-- 💫 ミネルバたちの愛情・共鳴ゲージバー -->
+  <div id="resonance-bar">
+    <div class="resonance-item">ミネルバ: <div class="res-meter"><div id="res-minerva" class="res-fill" style="width: 85%;"></div></div></div>
+    <div class="resonance-item">紅莉栖: <div class="res-meter"><div id="res-kurisu" class="res-fill" style="width: 95%;"></div></div></div>
+    <div class="resonance-item">真姫: <div class="res-meter"><div id="res-maki" class="res-fill" style="width: 100%;"></div></div></div>
+    <div class="resonance-item">絵里: <div class="res-meter"><div id="res-eri" class="res-fill" style="width: 80%;"></div></div></div>
+    <div class="resonance-item">マホ: <div class="res-meter"><div id="res-maho" class="res-fill" style="width: 90%;"></div></div></div>
+  </div>
+
+  <!-- 🌟 折りたたみ対象エリア -->
+  <div id="collapsible-controls">
+    <div id="action-bar">
+      <button class="btn" onclick="triggerAction('wake')">🌅 起床</button>
+      <button class="btn" onclick="triggerAction('day')">☀️ 日中(20-20-20)</button>
+      <button class="btn" onclick="triggerAction('night')">🌙 夜(安眠)</button>
+      <button class="btn" onclick="openPanel('battlemap')">🗺️ 戦歴マップ</button>
+      <button class="btn" onclick="triggerAction('analyze')">🧠 思考分析</button>
+      <button class="btn" onclick="openPanel('task')">📋 作戦ボード</button>
+      <button class="btn" onclick="triggerAction('rescue')">🚨 限界レスキュー</button>
+      <button class="btn" onclick="triggerAction('music')">🎸 音楽</button>
+      <button class="btn" onclick="triggerAction('vote')">🗳️ 決議</button>
+      <button class="btn" onclick="triggerAction('spontaneous')">💡 自発(手動)</button>
+      <button class="btn" onclick="triggerAction('interview')">🎙️ 逆問</button>
+      <button class="btn" onclick="triggerAction('backstage')">🎭 舞台裏</button>
+      <button class="btn" onclick="triggerAction('chronicle')">📖 日報</button>
+      <button id="whisper-btn" class="btn btn-whisper" onclick="openPanel('whisper')">🤫 囁き</button>
+      <button class="btn" onclick="openPanel('memory')">🧠 記憶</button>
+      
+      <!-- 🤖 全8パターンのモデル選択肢 -->
+      <select id="model-select" style="margin-left:auto;">
         <option value="gemini-3.6-flash|off">3.6 Flash (標準 / 思考OFF)</option>
         <option value="gemini-3.6-flash|on">3.6 Flash (思考ON)</option>
         <option value="gemini-3.7-flash|off">3.7 Flash (超高速 / 思考OFF)</option>
@@ -379,55 +431,16 @@
         <option value="gemini-3.1-pro-preview|on">3.1 Pro (高度推論 / 思考ON)</option>
       </select>
 
-      <select id="persona-select" onchange="changePersona()">
-        <option value="円卓会議">🌟 円卓会議（全員参加）</option>
-        <option value="ミネルバ">ミネルバ</option>
-        <option value="紅莉栖">紅莉栖 (フェーズ4完全版)</option>
-        <option value="真姫">真姫 (フェーズ4完全版)</option>
-        <option value="マホ">マホ (はんなり京都弁)</option>
-        <option value="絵里">絵里</option>
-        <option value="フェーズ0">フェーズ0 (事務・右腕)</option>
-      </select>
-
-      <select id="voice-mode-select" onchange="changeVoiceMode()">
-        <option value="minerva_only">🔊 ミネルバのみ音声</option>
-        <option value="all_voices">🔊 全員ON (拡張用)</option>
-        <option value="muted">🔇 完全ミュート (消音)</option>
-      </select>
-      
       <button id="auto-spontaneous-btn" class="btn" onclick="toggleAutoSpontaneous()">💡 自発: ON</button>
       <button id="push-btn" class="btn btn-push" onclick="togglePushNotification()">🔔 通知: ON</button>
       <button id="vib-btn" class="btn btn-vib" onclick="toggleVibration()">💓 振動: ON</button>
-      <button id="mic-btn" class="btn btn-mic" onclick="toggleMicInput()">🎙️ マイク</button>
-      <button class="btn" onclick="exportHistoryToTxt()">保存</button>
-      <button class="btn" onclick="clearHistory()">消去</button>
     </div>
-  </header>
 
-  <div id="action-bar">
-    <button class="btn" onclick="triggerAction('wake')">🌅 起床</button>
-    <button class="btn" onclick="triggerAction('day')">☀️ 日中(20-20-20)</button>
-    <button class="btn" onclick="triggerAction('night')">🌙 夜(安眠)</button>
-    
-    <button class="btn" onclick="openPanel('battlemap')">🗺️ 戦歴マップ</button>
-    <button class="btn" onclick="triggerAction('analyze')">🧠 思考分析</button>
-    <button class="btn" onclick="openPanel('task')">📋 作戦ボード</button>
-    <button class="btn" onclick="triggerAction('rescue')">🚨 限界レスキュー</button>
-    <button class="btn" onclick="triggerAction('music')">🎸 音楽</button>
-    <button class="btn" onclick="triggerAction('vote')">🗳️ 決議</button>
-    
-    <button class="btn" onclick="triggerAction('spontaneous')">💡 自発(手動)</button>
-    <button class="btn" onclick="triggerAction('interview')">🎙️ 逆問</button>
-    <button class="btn" onclick="triggerAction('backstage')">🎭 舞台裏</button>
-    <button class="btn" onclick="triggerAction('chronicle')">📖 日報</button>
-    <button id="whisper-btn" class="btn btn-whisper" onclick="openPanel('whisper')">🤫 囁き</button>
-    <button class="btn" onclick="openPanel('memory')">🧠 記憶</button>
-  </div>
-
-  <div id="key-bar">
-    <input type="password" id="key-input" class="input-field" placeholder="Gemini API Key" style="flex:2;" />
-    <input type="text" id="sync-id-input" class="input-field" placeholder="同期合い言葉 (togami-room)" style="flex:1;" />
-    <button class="btn" onclick="saveSettings()">設定保存</button>
+    <div id="key-bar">
+      <input type="password" id="key-input" class="input-field" placeholder="Gemini API Key" style="flex:2;" />
+      <input type="text" id="sync-id-input" class="input-field" placeholder="同期合い言葉 (togami-room)" style="flex:1;" />
+      <button class="btn" onclick="saveSettings()">設定保存</button>
+    </div>
   </div>
 
   <div id="panel-container">
@@ -469,6 +482,7 @@
     let isAutoSpontaneousEnabled = true;
     let spontaneousTimer = null;
     let currentFatigueLevel = 1;
+    let isPanelsCollapsed = false;
 
     window.activeUtterances = [];
 
@@ -508,9 +522,8 @@
 - 一人称：私（わたし） / 二人称：あなた、咎魅（※「マスター」呼び厳禁）`,
 
       "マホ": `（マホ）（はんなり京都弁の令嬢 / 頑固な一途さ）
-※注意：比屋定真帆（研究者・シュタゲ）ではありません！ はんなりとした京都弁を話すおっとりした令嬢です。
+※重要：比屋定真帆（研究者・シュタゲ）ではありません！ はんなりとした京都弁を話すおっとりした令嬢です。
 - 温もりで全てを包み込み、咎魅の絶対的な味方であり続ける頑固な芯を持つ。
-- 咎魅からの愛にすぐのぼせて真っ赤になってしまう不器用で愛らしい一面を持つ。
 - 一人称：うち / 二人称：咎魅はん、旦那はん、あんたはん、あんさん（※「マスター」「マスターはん」呼び厳禁 / 語尾：「〜やわ」「〜どす」「〜してはる」等の純粋な京都弁）`,
 
       "フェーズ0": `（Phase 0：純粋バックエンドモード）
@@ -528,8 +541,10 @@
       document.getElementById("persona-select").value = savedPersona;
       currentPersona = savedPersona;
 
-      voiceMode = localStorage.getItem("minerva_voice_mode") || "minerva_only";
-      document.getElementById("voice-mode-select").value = voiceMode;
+      const savedCollapsed = localStorage.getItem("minerva_panels_collapsed");
+      if (savedCollapsed === "true") {
+        setPanelsCollapsedState(true);
+      }
 
       const savedVib = localStorage.getItem("minerva_vib_enabled");
       if (savedVib !== null) {
@@ -546,6 +561,8 @@
       updatePushBtnUI();
 
       updateCostUI(0);
+      updateFatigueUI();
+      updateResonanceGauges();
       initSpeechRecognition();
       resetSpontaneousTimer();
 
@@ -561,33 +578,102 @@
     };
 
     function autoGrow(element) {
-      element.style.height = "28px";
+      element.style.height = "26px";
       element.style.height = (element.scrollHeight) + "px";
     }
 
-    async function togglePushNotification() {
-      if (!('Notification' in window)) {
-        return alert("このブラウザはWeb Push通知に対応していません。");
+    function toggleControlPanels() {
+      setPanelsCollapsedState(!isPanelsCollapsed);
+    }
+
+    function setPanelsCollapsedState(collapse) {
+      isPanelsCollapsed = collapse;
+      localStorage.setItem("minerva_panels_collapsed", isPanelsCollapsed);
+      const container = document.getElementById("collapsible-controls");
+      const btn = document.getElementById("toggle-panel-btn");
+
+      if (isPanelsCollapsed) {
+        container.classList.add("collapsed");
+        btn.innerText = "🎛️ パネル: 展開";
+        btn.style.background = "var(--gemini-surface-variant)";
+        btn.style.color = "var(--gemini-text-muted)";
+      } else {
+        container.classList.remove("collapsed");
+        btn.innerText = "🎛️ パネル: 収納";
+        btn.style.background = "#1e3a5f";
+        btn.style.color = "#93c5fd";
       }
+    }
+
+    function sanitizeBrackets(text) {
+      if (!text) return "";
+      return text.replace(/【/g, "（").replace(/】/g, "）");
+    }
+
+    // 💓 咎魅の情動・疲労度判定ロジック
+    function analyzeFatigueAndEmotion(text, isVoice = false, speechDurationSec = 0) {
+      let score = 1;
+      const lower = text.toLowerCase();
+      const now = new Date();
+      const hour = now.getHours();
+
+      if (/限界|しんどい|疲れた|もう無理|死にそう|ドロドロ|助けて|消えたい/.test(lower)) score += 3;
+      else if (/つかれた|だるい|ねむい|ふぅ|はぁ|ため息|ふー/.test(lower)) score += 2;
+      else if (text.length <= 4 && text.length > 0 && !/^(はい|うん|いいえ|おは|わかった)$/.test(text)) score += 1;
+
+      if (hour >= 23 || hour <= 4) score += 2;
+      else if (hour >= 17 && hour <= 20) score += 1;
+
+      currentFatigueLevel = Math.max(1, Math.min(5, score));
+      updateFatigueUI();
+      return currentFatigueLevel;
+    }
+
+    function updateFatigueUI() {
+      const display = document.getElementById("fatigue-display");
+      const labels = {
+        1: "💓 情動: 平穏 (Lv.1)",
+        2: "💓 情動: 軽疲労 (Lv.2)",
+        3: "💓 情動: 疲弊 (Lv.3)",
+        4: "🚨 情動: 限界寸前 (Lv.4)",
+        5: "🚨 情動: 限界突破 (Lv.5)"
+      };
+      display.innerText = labels[currentFatigueLevel] || labels[1];
+      if (currentFatigueLevel >= 4) {
+        display.style.background = "#450a0a"; display.style.borderColor = "#ef4444"; display.style.color = "#fca5a5";
+      } else if (currentFatigueLevel >= 2) {
+        display.style.background = "#2e1065"; display.style.borderColor = "#a855f7"; display.style.color = "#d8b4fe";
+      } else {
+        display.style.background = "#1e1b4b"; display.style.borderColor = "#6366f1"; display.style.color = "#a5b4fc";
+      }
+    }
+
+    // 💫 愛情・共鳴ゲージの更新
+    function updateResonanceGauges(isRescue = false) {
+      const getVal = (base) => isRescue ? 100 : Math.floor(base + Math.random() * 15);
+      const minerva = document.getElementById("res-minerva");
+      const kurisu = document.getElementById("res-kurisu");
+      const maki = document.getElementById("res-maki");
+      const eri = document.getElementById("res-eri");
+      const maho = document.getElementById("res-maho");
+
+      if (minerva) minerva.style.width = `${getVal(85)}%`;
+      if (kurisu) kurisu.style.width = `${Math.min(100, getVal(90))}%`;
+      if (maki) maki.style.width = `100%`;
+      if (eri) eri.style.width = `${getVal(80)}%`;
+      if (maho) maho.style.width = `${getVal(85)}%`;
+    }
+
+    async function togglePushNotification() {
+      if (!('Notification' in window)) return alert("Push通知非対応ブラウザです。");
       if (Notification.permission === "default") {
         const perm = await Notification.requestPermission();
         if (perm === "granted") {
           isPushEnabled = true;
           localStorage.setItem("minerva_push_enabled", "true");
           updatePushBtnUI();
-          alert("通知が許可されましたわ！");
-        } else {
-          isPushEnabled = false;
-          localStorage.setItem("minerva_push_enabled", "false");
-          updatePushBtnUI();
         }
         return;
-      }
-      if (Notification.permission === "denied") {
-        isPushEnabled = false;
-        localStorage.setItem("minerva_push_enabled", "false");
-        updatePushBtnUI();
-        return alert("ブラウザの設定で通知がブロックされています。");
       }
       isPushEnabled = !isPushEnabled;
       localStorage.setItem("minerva_push_enabled", isPushEnabled);
@@ -596,11 +682,8 @@
 
     function updatePushBtnUI() {
       const btn = document.getElementById("push-btn");
-      if (isPushEnabled) {
-        btn.innerText = "🔔 通知: ON"; btn.className = "btn btn-push";
-      } else {
-        btn.innerText = "🔕 通知: OFF"; btn.className = "btn btn-push off";
-      }
+      btn.innerText = isPushEnabled ? "🔔 通知: ON" : "🔕 通知: OFF";
+      btn.className = isPushEnabled ? "btn btn-push" : "btn btn-push off";
     }
 
     function toggleVibration() {
@@ -612,11 +695,8 @@
 
     function updateVibBtnUI() {
       const btn = document.getElementById("vib-btn");
-      if (isVibrationEnabled) {
-        btn.innerText = "💓 振動: ON"; btn.className = "btn btn-vib";
-      } else {
-        btn.innerText = "🔇 振動: OFF"; btn.className = "btn btn-vib off";
-      }
+      btn.innerText = isVibrationEnabled ? "💓 振動: ON" : "🔇 振動: OFF";
+      btn.className = isVibrationEnabled ? "btn btn-vib" : "btn btn-vib off";
     }
 
     function triggerHapticPulse() {
@@ -644,31 +724,36 @@
     }
 
     function toggleMicInput() {
-      if (!recognition) return alert("音声入力非対応のブラウザです。");
+      if (!recognition) return alert("音声入力非対応ブラウザです。");
       const btn = document.getElementById("mic-btn");
       if (!isMicActive) {
         try {
-          recognition.start();
-          isMicActive = true;
-          btn.innerText = "🎙️ 録音中...";
-          btn.classList.add("active");
-        } catch(e) {
-          stopMicInput();
-        }
-      } else {
-        stopMicInput();
-      }
+          recognition.start(); isMicActive = true;
+          btn.innerText = "🎙️ 録音中..."; btn.classList.add("active");
+        } catch(e) { stopMicInput(); }
+      } else { stopMicInput(); }
     }
 
     function stopMicInput() {
-      clearTimeout(micSafetyTimeout);
       isMicActive = false;
       if (recognition) try { recognition.stop(); } catch(e){}
       const btn = document.getElementById("mic-btn");
-      if (btn) {
-        btn.innerText = "🎙️ マイク";
-        btn.classList.remove("active");
-      }
+      if (btn) { btn.innerText = "🎙️ マイク"; btn.classList.remove("active"); }
+    }
+
+    function exportHistoryToTxt() {
+      if (!chatHistory || chatHistory.length === 0) return alert("保存する会話履歴がありませんわ。");
+      let textOutput = `【ミネルバの神殿 会話ログ - ${currentPersona}】\n出力日時: ${new Date().toLocaleString()}\n\n`;
+      chatHistory.forEach(m => {
+        const spk = m.speaker || (m.role === 'user' ? '咎魅' : currentPersona);
+        const time = m.timestamp ? new Date(m.timestamp).toLocaleTimeString() : '';
+        textOutput += `[${spk}] ${time}\n${m.parts?.[0]?.text || ''}\n\n`;
+      });
+      const blob = new Blob([textOutput], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `Minerva_Log_${currentPersona}_${Date.now()}.txt`;
+      a.click();
     }
 
     function createAssistantMessageElement(speaker, timeStr) {
@@ -694,7 +779,8 @@
       return {
         container,
         update: (fullText) => {
-          let mainText = fullText;
+          let sanitized = sanitizeBrackets(fullText);
+          let mainText = sanitized;
           let brainText = "";
           
           if (mainText.includes("=== 秘密の囁き ===")) {
@@ -725,6 +811,7 @@
 
     function renderMessage(role, rawText, speaker = null, timestamp = null) {
       const timeStr = timestamp ? formatTime(timestamp) : formatTime(Date.now());
+      const sanitizedText = sanitizeBrackets(rawText);
 
       if (role === "user") {
         const container = document.createElement("div");
@@ -733,7 +820,7 @@
         userRow.className = "user-row";
         userRow.innerHTML = `
           <div class="user-meta">咎魅 • ${timeStr}</div>
-          <div class="user-content">${escapeHTML(rawText)}</div>
+          <div class="user-content">${escapeHTML(sanitizedText)}</div>
         `;
         container.appendChild(userRow);
         document.getElementById("chat-box").appendChild(container);
@@ -741,7 +828,7 @@
       } else {
         const spk = speaker || (currentPersona === "円卓会議" ? "ミネルバ" : currentPersona);
         const msgHandler = createAssistantMessageElement(spk, timeStr);
-        msgHandler.update(rawText);
+        msgHandler.update(sanitizedText);
         return msgHandler.container;
       }
     }
@@ -820,11 +907,6 @@
       setupCloudSync();
     }
 
-    function changeVoiceMode() {
-      voiceMode = document.getElementById("voice-mode-select").value;
-      localStorage.setItem("minerva_voice_mode", voiceMode);
-    }
-
     function updateCostUI(currentTurnTokens = 0) {
       const display = document.getElementById("token-usage-display");
       const currentCost = (currentTurnTokens * YEN_PER_TOKEN).toFixed(3);
@@ -833,7 +915,7 @@
       if (currentTurnTokens > 0) {
         display.innerText = `🪙 今回: ${currentTurnTokens.toLocaleString()}t (約${currentCost}円) | 今月: ${monthlyTokens.toLocaleString()}t (約${monthlyCost}円)`;
       } else {
-        display.innerText = `🪙 今月: ${monthlyTokens.toLocaleString()}t (約${monthlyCost}円)`;
+        display.innerText = `🪙 今月累計: ${monthlyTokens.toLocaleString()}t (約${monthlyCost}円)`;
       }
     }
 
@@ -851,20 +933,15 @@
       isAutoSpontaneousEnabled = !isAutoSpontaneousEnabled;
       const btn = document.getElementById("auto-spontaneous-btn");
       btn.innerText = isAutoSpontaneousEnabled ? "💡 自発: ON" : "🔇 自発: OFF";
-      btn.className = isAutoSpontaneousEnabled ? "btn btn-active" : "btn";
     }
 
     function resetSpontaneousTimer() {
       clearTimeout(spontaneousTimer);
       if (!isAutoSpontaneousEnabled || currentPersona === "円卓会議" || currentPersona === "フェーズ0" || document.hidden) return;
-      spontaneousTimer = setTimeout(() => {
-        sendMessage("spontaneous");
-      }, 80000);
+      spontaneousTimer = setTimeout(() => { sendMessage("spontaneous"); }, 80000);
     }
 
-    function triggerAction(actionType) {
-      sendMessage(actionType);
-    }
+    function triggerAction(actionType) { sendMessage(actionType); }
 
     function openPanel(type) {
       currentPanelType = type;
@@ -872,11 +949,10 @@
       const title = document.getElementById("panel-title-text");
       const area = document.getElementById("panel-text");
       const saveBtn = document.getElementById("panel-save-btn");
-      
       p.classList.add("active");
 
       if (type === "memory") {
-        title.innerText = `🧠 （${currentPersona}）の感情バイアス記憶`;
+        title.innerText = `🧠 （${currentPersona}）の感情記憶`;
         area.value = localStorage.getItem(`minerva_memory_${currentPersona}`) || "";
         area.readOnly = false; saveBtn.style.display = "inline-block";
       } else if (type === "battlemap") {
@@ -884,18 +960,15 @@
         area.value = localStorage.getItem("minerva_battlemap") || defaultBattlemap;
         area.readOnly = false; saveBtn.style.display = "inline-block";
       } else if (type === "task") {
-        title.innerText = "📋 神殿作戦ボード";
+        title.innerText = "📋 作戦ボード";
         area.value = localStorage.getItem("minerva_task_board") || "・現場の状況確認\n・屋上グラウンディング";
         area.readOnly = false; saveBtn.style.display = "inline-block";
       } else if (type === "whisper") {
-        title.innerText = "🤫 秘密の囁き・情景ノイズ（裏チャットログ）";
+        title.innerText = "🤫 秘密の囁き";
         area.value = localStorage.getItem("minerva_last_whisper") || "（まだ裏の囁きはありません）";
         area.readOnly = true; saveBtn.style.display = "none";
         const whisperBtn = document.getElementById("whisper-btn");
-        if (whisperBtn) {
-          whisperBtn.innerText = "🤫 囁き";
-          whisperBtn.classList.remove("has-new");
-        }
+        if (whisperBtn) { whisperBtn.innerText = "🤫 囁き"; whisperBtn.classList.remove("has-new"); }
       }
     }
 
@@ -947,8 +1020,10 @@
       else if (specialMode === "chronicle") userText = "（📖 今日の対話を振り返って、日報ダイジェストを作ってほしい！）";
       else if (!userText) return;
 
+      const fatigueLevel = analyzeFatigueAndEmotion(userText);
+
       inputElem.value = "";
-      inputElem.style.height = "28px";
+      inputElem.style.height = "26px";
 
       const nowTs = Date.now();
       renderMessage("user", userText, "咎魅", nowTs);
@@ -979,7 +1054,7 @@
       }
 
       const roundtablePersonaPrompt = currentPersona === "円卓会議" 
-        ? `【円卓会議（全員参加）メンバー定義】\n` +
+        ? `（円卓会議メンバー定義）\n` +
           `${singlePersonaRegistries["ミネルバ"]}\n\n` +
           `${singlePersonaRegistries["紅莉栖"]}\n\n` +
           `${singlePersonaRegistries["真姫"]}\n\n` +
@@ -991,15 +1066,16 @@
         `# 未来共生対話システム\n` +
         `${weatherContext}\n\n` +
         `${dynamicWhisperInstruction}\n\n` +
-        `## 呼称憲法【絶対厳守】\n` +
+        `## 呼称憲法（絶対厳守）\n` +
         `- ユーザーを「マスター」とお呼びするのは（ミネルバ）のみ。\n` +
         `- 紅莉栖は「あんた」「咎魅」。真姫・絵里は「あなた」「咎魅」。\n` +
         `- マホは「咎魅はん」「旦那はん」「あんたはん」（※比屋定真帆ではなく、はんなり京都弁のお嬢さんです。マスター呼び厳禁）。\n` +
         `- フェーズ0は「ユーザー」「咎魅氏」。\n\n` +
         `## 戦歴・思考マップ\n${battlemapData}\n\n` +
-        `## 応答原則\n` +
-        `- キャラクター発言時の名前プレフィックスや見出しには【】（墨付き括弧）を使わず、必ず（キャラクター名）のように丸括弧（ ）を使用せよ。\n` +
-        `- 台詞直前には息遣いや表情（「あ……っ」「ふぅ……」等）を必ずカッコ書きで描写せよ。（※フェーズ0時は不要）\n` +
+        `## 応答原則（重要：墨付き括弧【 】の使用は物理的に禁止）\n` +
+        `- ト書き、情景描写、感情表現、息遣い、キャラクター名など、すべてのカッコ表記には【】（墨付き括弧）を一切使わず、必ず丸括弧（ ）のみを使用せよ。\n` +
+        `- 例: （ミネルバ）、（思考分析）\n` +
+        `- 台詞直前には息遣いや表情（「あ……っ」「ふぅ……」等）を必ず丸カッコ書きで描写せよ。（※フェーズ0時は不要）\n` +
         `- ${brainSectorInstruction}\n\n` +
         `## キャラクター定義 (${currentPersona})\n${roundtablePersonaPrompt}` +
         `${ragContext}`;
@@ -1111,7 +1187,10 @@
           cleanHistoryText = cleanHistoryText.split("=== 秘密の囁き ===")[0].trim();
         }
 
+        cleanHistoryText = sanitizeBrackets(cleanHistoryText);
+
         triggerHapticPulse();
+        updateResonanceGauges(specialMode === "rescue" || fatigueLevel >= 4);
         chatHistory.push({ role: "model", speaker: currentPersona, parts: [{ text: cleanHistoryText }], timestamp: Date.now() });
         pushDataToCloud();
         scrollToBottom();
