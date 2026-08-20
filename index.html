@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ミネルバの神殿 - Direct Edition (Live Sync)</title>
   
-  <!-- エディタと同一のFirebase SDK (v10.12.0) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
@@ -112,7 +111,7 @@
   <header>
     <div class="header-left">
       <span>💫 Minerva Direct</span>
-      <span class="version-tag">ver.26.08.20.12.35</span>
+      <span class="version-tag">ver.26.08.20.12.43</span>
       <span id="sync-indicator" class="sync-status sync-ok">⚡ ライブ同期: 接続中 (OK)</span>
       <span id="token-usage-display" class="token-badge" onclick="manualEditMonthlyTokens()" title="クリックして今月の累計トークン数を手動修正・リセット">🪙 計算中...</span>
       <span id="fatigue-display" class="fatigue-badge">💓 情動: 平穏 (Lv.1)</span>
@@ -336,7 +335,7 @@
       resetSpontaneousTimer();
       startScheduledClockAndWeatherMonitor();
 
-      // 🚀 シンガポールDBへ接続＆同期開始
+      // 🚀 シンガポールDBへ接続＆同期監視
       try {
         if (!firebase.apps.length) {
           firebase.initializeApp({ databaseURL: SINGAPORE_DB_URL });
@@ -801,7 +800,6 @@
       scrollToBottom();
     }
 
-    // ⚡ エディタ（minerva_rooms/togami-room）の全更新を監視
     function setupCloudSync() {
       if (!db || !syncRoomId) return;
       
@@ -840,12 +838,11 @@
       });
     }
 
-    // ⚡ エディタ側へ一括同期書き込み
+    // ⚡ エディタ完全適合：咎魅 / キャラ名 を明記して一括保存
     function pushDataToCloud() {
       if (!db || !syncRoomId) return;
       const targetP = document.getElementById("persona-select").value || currentPersona;
       
-      // エディタの「全体ログ」と「各キャラ部屋」の両方を同時に更新
       const updates = {};
       updates[`${targetP}/chatHistory`] = chatHistory;
       updates[`${targetP}/memoryText`] = localStorage.getItem(`minerva_memory_${targetP}`) || "";
@@ -979,7 +976,7 @@
         });
 
         if (score > 0) {
-          matchedItems.push({ text: `${msg.role === 'user' ? '咎魅' : 'AI'}: ${text}`, score: score, index: idx });
+          matchedItems.push({ text: `${msg.speaker || (msg.role === 'user' ? '咎魅' : 'AI')}: ${text}`, score: score, index: idx });
         }
       });
 
@@ -1045,7 +1042,16 @@
 
       inputElem.value = "";
       appendMessage("user", userText);
-      chatHistory.push({ role: "user", parts: [{ text: userText }], timestamp: Date.now() });
+      
+      // 🌟 エディタが100%拾い上げる【咎魅】の刻印
+      const userMsgObj = { 
+        role: "user", 
+        speaker: "咎魅",
+        parts: [{ text: userText }], 
+        timestamp: Date.now() 
+      };
+      
+      chatHistory.push(userMsgObj);
       cleanOldHistory(); saveChatHistory(); pushDataToCloud();
       scrollToBottom();
       resetSpontaneousTimer();
@@ -1266,7 +1272,15 @@
           cleanHistoryText = cleanHistoryText.split("=== 秘密の囁き ===")[0].trim();
         }
 
-        chatHistory.push({ role: "model", parts: [{ text: cleanHistoryText }], timestamp: Date.now() });
+        // 🌟 各キャラ（真姫・紅莉栖・ミネルバ等）をエディタ完全互換のspeakerとして刻印
+        const aiMsgObj = { 
+          role: "model", 
+          speaker: currentPersona,
+          parts: [{ text: cleanHistoryText }], 
+          timestamp: Date.now() 
+        };
+
+        chatHistory.push(aiMsgObj);
         saveChatHistory(); pushDataToCloud();
         resetSpontaneousTimer();
 
