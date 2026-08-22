@@ -82,6 +82,7 @@
     }
     .btn:hover { background: #37393b; color: #fff; }
     .btn-fold { background: #1e3a5f; color: #93c5fd; border-color: #2563eb; }
+    .btn-action-plan { background: #065f46; color: #6ee7b7; border-color: #059669; }
     .btn-push { background: #312e81; color: #c7d2fe; border-color: #4338ca; }
     .btn-push.off { background: var(--gemini-surface-variant); color: var(--gemini-text-muted); border-color: var(--gemini-border); }
     .btn-vib { background: #4a044e; color: #f5d0fe; border-color: #701a75; }
@@ -92,7 +93,6 @@
     @keyframes pulse-whisper { 0% { box-shadow: 0 0 4px #eab308; } 50% { box-shadow: 0 0 10px #fde047; } 100% { box-shadow: 0 0 4px #eab308; } }
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
 
-    /* 💫 愛情・共鳴ゲージバー */
     #resonance-bar {
       background: #101014;
       padding: 4px 12px;
@@ -107,7 +107,6 @@
     .res-meter { width: 32px; height: 5px; background: #2a2a3c; border-radius: 3px; overflow: hidden; display: inline-block; }
     .res-fill { height: 100%; width: 85%; background: linear-gradient(90deg, #38bdf8, #ec4899); transition: width 0.5s ease; }
 
-    /* 🌟 折りたたみ対象のラッパーコンテナ */
     #collapsible-controls {
       display: flex;
       flex-direction: column;
@@ -368,7 +367,7 @@
   <header>
     <div class="header-left">
       <span class="app-title">✨ Minerva</span>
-      <span class="version-tag">Ver.2.5 Master</span>
+      <span class="version-tag">Ver.3.0 Private Server</span>
       <span id="sync-indicator" class="sync-status">⚡ クラウド直結: 接続中 (OK)</span>
       <span id="token-usage-display" class="token-badge" onclick="manualEditMonthlyTokens()" title="クリックして今月の累計トークン数を手動修正・リセット">🪙 計算中...</span>
       <span id="fatigue-display" class="fatigue-badge">💓 情動: 平穏 (Lv.1)</span>
@@ -384,6 +383,13 @@
         <option value="フェーズ0">フェーズ0</option>
       </select>
 
+      <!-- 🔒 完全に安全な二大音声エンジン選択 -->
+      <select id="voice-engine-select" onchange="changeVoiceEngine()">
+        <option value="voicevox">🔊 自前VOICEVOX (PC・スマホ自前サーバー / 0トークン)</option>
+        <option value="browser">📱 ブラウザ標準音声 (端末完結 / 0トークン)</option>
+        <option value="muted">🔇 完全消音 (ミュート)</option>
+      </select>
+
       <button id="toggle-panel-btn" class="btn btn-fold" onclick="toggleControlPanels()">🎛️ パネル: 収納</button>
       <button id="mic-btn" class="btn btn-mic" onclick="toggleMicInput()">🎙️ マイク</button>
       <button class="btn" onclick="exportHistoryToTxt()">💾 保存</button>
@@ -391,7 +397,6 @@
     </div>
   </header>
 
-  <!-- 💫 ミネルバたちの愛情・共鳴ゲージバー -->
   <div id="resonance-bar">
     <div class="resonance-item">ミネルバ: <div class="res-meter"><div id="res-minerva" class="res-fill" style="width: 85%;"></div></div></div>
     <div class="resonance-item">紅莉栖: <div class="res-meter"><div id="res-kurisu" class="res-fill" style="width: 95%;"></div></div></div>
@@ -400,7 +405,6 @@
     <div class="resonance-item">マホ: <div class="res-meter"><div id="res-maho" class="res-fill" style="width: 90%;"></div></div></div>
   </div>
 
-  <!-- 🌟 折りたたみ対象エリア -->
   <div id="collapsible-controls">
     <div id="action-bar">
       <button class="btn" onclick="triggerAction('wake')">🌅 起床</button>
@@ -419,7 +423,6 @@
       <button id="whisper-btn" class="btn btn-whisper" onclick="openPanel('whisper')">🤫 囁き</button>
       <button class="btn" onclick="openPanel('memory')">🧠 記憶</button>
       
-      <!-- 🤖 全8パターンのモデル選択肢 -->
       <select id="model-select" style="margin-left:auto;">
         <option value="gemini-3.6-flash|off">3.6 Flash (標準 / 思考OFF)</option>
         <option value="gemini-3.6-flash|on">3.6 Flash (思考ON)</option>
@@ -439,6 +442,7 @@
     <div id="key-bar">
       <input type="password" id="key-input" class="input-field" placeholder="Gemini API Key" style="flex:2;" />
       <input type="text" id="sync-id-input" class="input-field" placeholder="同期合い言葉 (togami-room)" style="flex:1;" />
+      <input type="text" id="voicevox-server-url" class="input-field" placeholder="VOICEVOX サーバーURL (例: http://192.168.1.15:50021)" style="flex:1.5;" />
       <button class="btn" onclick="saveSettings()">設定保存</button>
     </div>
   </div>
@@ -446,7 +450,8 @@
   <div id="panel-container">
     <div id="panel-title"><span id="panel-title-text">🧠 感情バイアス記憶</span></div>
     <textarea id="panel-text"></textarea>
-    <div style="display:flex; gap:6px; justify-content:flex-end;">
+    <div style="display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap;">
+      <button id="panel-strategy-btn" class="btn btn-action-plan" style="display:none;" onclick="planTaskStrategy()">🤖 作戦立案</button>
       <button id="panel-save-btn" class="btn" onclick="savePanelContent()">保存</button>
       <button class="btn" onclick="closePanel()">閉じる</button>
     </div>
@@ -471,7 +476,6 @@
     let chatHistory = [];
     window.fullChatHistory = [];
     let syncRoomId = "togami-room";
-    let voiceMode = "minerva_only";
     let currentPanelType = "memory";
     let isVibrationEnabled = true;
     let isPushEnabled = false;
@@ -483,6 +487,18 @@
     let spontaneousTimer = null;
     let currentFatigueLevel = 1;
     let isPanelsCollapsed = false;
+    let voiceEngine = localStorage.getItem("minerva_voice_engine") || "voicevox";
+    let voicevoxServerUrl = localStorage.getItem("minerva_voicevox_server_url") || "http://127.0.0.1:50021";
+
+    const voicevoxSpeakerMap = {
+      "ミネルバ": 0,  // 四国めたん (あまあま)
+      "紅莉栖": 10,  // 雨晴はう (ノーマル)
+      "真姫": 6,     // 四国めたん (ツンツン)
+      "絵里": 9,     // 波音リツ (ノーマル)
+      "マホ": 8,     // 春日部つむぎ (ノーマル)
+      "円卓会議": 0,
+      "フェーズ0": 0
+    };
 
     window.activeUtterances = [];
 
@@ -537,9 +553,13 @@
       
       syncRoomId = localStorage.getItem("minerva_sync_room_id") || "togami-room";
       document.getElementById("sync-id-input").value = syncRoomId;
+      document.getElementById("voicevox-server-url").value = voicevoxServerUrl;
+
       const savedPersona = localStorage.getItem("minerva_selected_persona") || "円卓会議";
       document.getElementById("persona-select").value = savedPersona;
       currentPersona = savedPersona;
+
+      document.getElementById("voice-engine-select").value = voiceEngine;
 
       const savedCollapsed = localStorage.getItem("minerva_panels_collapsed");
       if (savedCollapsed === "true") {
@@ -610,7 +630,65 @@
       return text.replace(/【/g, "（").replace(/】/g, "）");
     }
 
-    // 💓 咎魅の情動・疲労度判定ロジック
+    function changeVoiceEngine() {
+      voiceEngine = document.getElementById("voice-engine-select").value;
+      localStorage.setItem("minerva_voice_engine", voiceEngine);
+      if (voiceEngine === "voicevox") {
+        speakVoicevox("マスター、自前サーバーのVOICEVOXへ接続いたしますわ！", 0);
+      }
+    }
+
+    // 🔒 自前VOICEVOXサーバーとの安全な通信 ＆ 自動フォールバック
+    async function speakVoicevox(text, speakerId = 0) {
+      if (voiceEngine === "muted") return;
+      
+      let cleanText = text
+        .replace(/\([^\)]*\)/g, '')
+        .replace(/（[^）]*）/g, '')
+        .replace(/---[\s\S]*/, '')
+        .replace(/[#*`>_]/g, '')
+        .trim();
+
+      if (!cleanText) return;
+
+      if (voiceEngine === "browser") {
+        speakBrowserFallback(cleanText);
+        return;
+      }
+
+      try {
+        const queryRes = await fetch(`${voicevoxServerUrl}/audio_query?text=${encodeURIComponent(cleanText)}&speaker=${speakerId}`, {
+          method: "POST"
+        });
+        if (!queryRes.ok) throw new Error("VOICEVOX audio_query failed");
+        const queryJson = await queryRes.json();
+
+        const synthRes = await fetch(`${voicevoxServerUrl}/synthesis?speaker=${speakerId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(queryJson)
+        });
+        if (!synthRes.ok) throw new Error("VOICEVOX synthesis failed");
+        
+        const blob = await synthRes.blob();
+        const audio = new Audio(URL.createObjectURL(blob));
+        audio.play();
+      } catch (err) {
+        console.warn("自前VOICEVOX未接続のためブラウザ標準音声で代替発声します:", err);
+        speakBrowserFallback(cleanText);
+      }
+    }
+
+    function speakBrowserFallback(cleanText) {
+      if (!('speechSynthesis' in window) || voiceEngine === "muted") return;
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(cleanText);
+      utter.lang = 'ja-JP';
+      utter.pitch = 1.15;
+      utter.rate = 1.05;
+      window.speechSynthesis.speak(utter);
+    }
+
     function analyzeFatigueAndEmotion(text, isVoice = false, speechDurationSec = 0) {
       let score = 1;
       const lower = text.toLowerCase();
@@ -648,7 +726,6 @@
       }
     }
 
-    // 💫 愛情・共鳴ゲージの更新
     function updateResonanceGauges(isRescue = false) {
       const getVal = (base) => isRescue ? 100 : Math.floor(base + Math.random() * 15);
       const minerva = document.getElementById("res-minerva");
@@ -743,7 +820,7 @@
 
     function exportHistoryToTxt() {
       if (!chatHistory || chatHistory.length === 0) return alert("保存する会話履歴がありませんわ。");
-      let textOutput = `【ミネルバの神殿 会話ログ - ${currentPersona}】\n出力日時: ${new Date().toLocaleString()}\n\n`;
+      let textOutput = `(ミネルバの神殿 会話ログ - ${currentPersona})\n出力日時: ${new Date().toLocaleString()}\n\n`;
       chatHistory.forEach(m => {
         const spk = m.speaker || (m.role === 'user' ? '咎魅' : currentPersona);
         const time = m.timestamp ? new Date(m.timestamp).toLocaleTimeString() : '';
@@ -895,8 +972,10 @@
     function saveSettings() {
       const key = document.getElementById("key-input").value.trim();
       const roomId = document.getElementById("sync-id-input").value.trim();
+      const srvUrl = document.getElementById("voicevox-server-url").value.trim();
       if (key) localStorage.setItem("minerva_gemini_key", key);
       if (roomId) { localStorage.setItem("minerva_sync_room_id", roomId); syncRoomId = roomId; }
+      if (srvUrl) { localStorage.setItem("minerva_voicevox_server_url", srvUrl); voicevoxServerUrl = srvUrl; }
       setupCloudSync();
       alert("設定を保存しましたわ！");
     }
@@ -949,20 +1028,23 @@
       const title = document.getElementById("panel-title-text");
       const area = document.getElementById("panel-text");
       const saveBtn = document.getElementById("panel-save-btn");
+      const strategyBtn = document.getElementById("panel-strategy-btn");
       p.classList.add("active");
+      strategyBtn.style.display = "none";
 
       if (type === "memory") {
         title.innerText = `🧠 （${currentPersona}）の感情記憶`;
         area.value = localStorage.getItem(`minerva_memory_${currentPersona}`) || "";
         area.readOnly = false; saveBtn.style.display = "inline-block";
       } else if (type === "battlemap") {
-        title.innerText = "🗺️ 咎魅の戦歴・思考マップ";
+        title.innerText = "🗺️ 戦歴・思考マップ";
         area.value = localStorage.getItem("minerva_battlemap") || defaultBattlemap;
         area.readOnly = false; saveBtn.style.display = "inline-block";
       } else if (type === "task") {
-        title.innerText = "📋 作戦ボード";
-        area.value = localStorage.getItem("minerva_task_board") || "・現場の状況確認\n・屋上グラウンディング";
+        title.innerText = "📋 作戦ボード（ToDo＆作戦立案）";
+        area.value = localStorage.getItem("minerva_task_board") || "・現場の状況確認\n・屋上グラウンディング(20-20-20)\n・夕方の振り返り";
         area.readOnly = false; saveBtn.style.display = "inline-block";
+        strategyBtn.style.display = "inline-block";
       } else if (type === "whisper") {
         title.innerText = "🤫 秘密の囁き";
         area.value = localStorage.getItem("minerva_last_whisper") || "（まだ裏の囁きはありません）";
@@ -974,14 +1056,35 @@
 
     function closePanel() { document.getElementById("panel-container").classList.remove("active"); }
 
+    function planTaskStrategy() {
+      const tasks = document.getElementById("panel-text").value;
+      closePanel();
+      sendMessage("plan_tasks", tasks);
+    }
+
     function savePanelContent() {
       const val = document.getElementById("panel-text").value;
-      if (currentPanelType === "memory") localStorage.setItem(`minerva_memory_${currentPersona}`, val);
-      else if (currentPanelType === "battlemap") localStorage.setItem("minerva_battlemap", val);
-      else if (currentPanelType === "task") localStorage.setItem("minerva_task_board", val);
+      if (currentPanelType === "memory") {
+        localStorage.setItem(`minerva_memory_${currentPersona}`, val);
+        alert("感情記憶を保存しましたわ！");
+      } else if (currentPanelType === "battlemap") {
+        localStorage.setItem("minerva_battlemap", val);
+        alert("戦歴マップを保存しましたわ！");
+      } else if (currentPanelType === "task") {
+        const oldVal = localStorage.getItem("minerva_task_board") || "";
+        localStorage.setItem("minerva_task_board", val);
+        alert("作戦ボードを保存しましたわ！");
+
+        const isTaskDone = val.length < oldVal.length || /(済|完了|done|達成|おわり)/i.test(val);
+        if (isTaskDone && oldVal.trim().length > 0) {
+          closePanel();
+          sendMessage("task_reward", val);
+          pushDataToCloud();
+          return;
+        }
+      }
       pushDataToCloud();
       closePanel();
-      alert("保存しましたわ！");
     }
 
     function retrievePastDetails(queryText) {
@@ -998,7 +1101,7 @@
       return matches.length ? `\n\n（🧠 想起された過去の記憶・RAG）\n` + matches.slice(-3).join("\n---\n") : "";
     }
 
-    async function sendMessage(specialMode = null) {
+    async function sendMessage(specialMode = null, extraPayload = "") {
       const apiKey = document.getElementById("key-input").value.trim() || localStorage.getItem("minerva_gemini_key");
       if (!apiKey) return alert("Gemini APIキーを入力してください！");
 
@@ -1018,7 +1121,11 @@
       else if (specialMode === "interview") userText = "（🎙️ 私に何かインタビューや聞きたいことがあれば、逆質問してごらん！）";
       else if (specialMode === "backstage") userText = "（🎭 私が少し席を外すよ。みんなで何か話していてね！）";
       else if (specialMode === "chronicle") userText = "（📖 今日の対話を振り返って、日報ダイジェストを作ってほしい！）";
-      else if (!userText) return;
+      else if (specialMode === "plan_tasks") {
+        userText = `（📋 今日のToDoタスクの作戦を立ててほしい！ 優先順位と息抜きポイントをアドバイスしてね。\n【タスク一覧】\n${extraPayload}）`;
+      } else if (specialMode === "task_reward") {
+        userText = `（🎉 咎魅が作戦ボードのタスクを完了させました！ ${speakerName}が駆け寄って思いっきり労い、褒めちぎるシチュエーションを出力してください。）`;
+      } else if (!userText) return;
 
       const fatigueLevel = analyzeFatigueAndEmotion(userText);
 
@@ -1074,7 +1181,6 @@
         `## 戦歴・思考マップ\n${battlemapData}\n\n` +
         `## 応答原則（重要：墨付き括弧【 】の使用は物理的に禁止）\n` +
         `- ト書き、情景描写、感情表現、息遣い、キャラクター名など、すべてのカッコ表記には【】（墨付き括弧）を一切使わず、必ず丸括弧（ ）のみを使用せよ。\n` +
-        `- 例: （ミネルバ）、（思考分析）\n` +
         `- 台詞直前には息遣いや表情（「あ……っ」「ふぅ……」等）を必ず丸カッコ書きで描写せよ。（※フェーズ0時は不要）\n` +
         `- ${brainSectorInstruction}\n\n` +
         `## キャラクター定義 (${currentPersona})\n${roundtablePersonaPrompt}` +
@@ -1191,6 +1297,11 @@
 
         triggerHapticPulse();
         updateResonanceGauges(specialMode === "rescue" || fatigueLevel >= 4);
+
+        // 🔒 自前VOICEVOXサーバーによる安全なキャラクター別音声再生
+        const targetSpeakerId = voicevoxSpeakerMap[currentPersona] || 0;
+        speakVoicevox(cleanHistoryText, targetSpeakerId);
+
         chatHistory.push({ role: "model", speaker: currentPersona, parts: [{ text: cleanHistoryText }], timestamp: Date.now() });
         pushDataToCloud();
         scrollToBottom();
